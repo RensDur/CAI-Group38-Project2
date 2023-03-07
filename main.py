@@ -20,7 +20,11 @@ if __name__ == "__main__":
         print("\nEnter one of the human conditions 'normal', 'strong', or 'weak':")
         choice3=input()
         if choice3=='normal' or choice3=='strong' or choice3=='weak':
-            builder = create_builder(task_type=choice1, condition=choice3, name=choice2, folder=fld)
+            print("\nEnter one of the evaluation types 'ALWAYS-TRUST', 'NEVER-TRUST' or 'RANDOM-TRUST'. Leave empty if not evaluating:")
+            choice4 = input()
+            if choice4 not in ['ALWAYS-TRUST', 'NEVER-TRUST', 'RANDOM-TRUST']:
+                choice4 = None
+            builder = create_builder(task_type=choice1, condition=choice3, name=choice2, eval_type=choice4, folder=fld)
         else:
             print("\nWrong condition name entered")
 
@@ -39,5 +43,5 @@ if __name__ == "__main__":
     vis_thread.join()
     if choice1=="official":
         # Generate one final output log file for the official task type
-        output_logger(fld)
+        output_logger(fld, 'NEVER-TRUST')
     builder.stop()
