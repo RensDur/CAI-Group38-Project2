@@ -878,7 +878,7 @@ class BaselineAgent(ArtificialBrain):
                 # Willingness-drop, since, by lying, the human shows not to be
                 # really willing to solve this task quickly.
                 if prevMessage and 'Search' in prevMessage and not message == prevMessage:
-                    decreaseWillingnessBelief()
+                    decreaseWillingnessBelief(0.5)
 
 
                 # If the previous message says 'Found', meaning that the human found a victim
