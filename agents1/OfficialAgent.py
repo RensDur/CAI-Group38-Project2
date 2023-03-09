@@ -799,13 +799,130 @@ class BaselineAgent(ArtificialBrain):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
+
+        # Define functions increase/decreaseWillingnessBelief and increase/decreaseCompetenceBelief
+        willingnessUpdateSpeed = 0.03
+        competenceUpdateSpeed = 0.05
+
+        def clipWillingnessAndCompetenceBeliefs():
+            # Make sure the trustBeliefs remain between -1 and +1
+            trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
+            trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
+
+        def increaseWillingnessBelief(factor=1.0):
+            trustBeliefs[self._humanName]['willingness'] += willingnessUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def decreaseWillingnessBelief(factor=1.0):
+            trustBeliefs[self._humanName]['willingness'] -= willingnessUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def increaseCompetenceBelief(factor=1.0):
+            trustBeliefs[self._humanName]['competence'] += competenceUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def decreaseCompetenceBelief(factor=1.0):
+            trustBeliefs[self._humanName]['competence'] -= competenceUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+
+        # Function: find closest previous message that is not 'Continue'
+        def findPreviousMessageSkipContinue(msgs, index):
+
+            i = index - 1
+            while i >= 0:
+                if not 'Continue' in msgs[i]:
+                    return msgs[i]
+
+                i -= 1
+
+            return None
+
+
         # Update the trust value based on for example the received messages
-        for message in receivedMessages:
-            # Increase agent trust in a team member that rescued a victim
+        for i, message in enumerate(receivedMessages):
+
+            #
+            # TRUST MECHANISM
+            #
+
+            # This is an example that was already given in the code
+            # # Increase agent trust in a team member that rescued a victim
+            # if 'Collect' in message:
+            #     trustBeliefs[self._humanName]['competence']+=0.10
+            #     # Restrict the competence belief to a range of -1 to 1
+            #     trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
+
+
+            # Find the previous message and store it temporarily
+            prevMessage = findPreviousMessageSkipContinue(receivedMessages, i)
+
+
+            # If the human messages that he/she will search room x,
+            # the robot's willingness-belief will increase
+            # (the human was motivated to search room x)
+            if 'Search' in message:
+
+                # The willingness belief will increase
+                increaseWillingnessBelief()
+
+                # If this exact room has already been searched earlier,
+                # the competence belief will drop, since the human wasn't capable
+                # of remembering that this room has already been searched.
+                if message in receivedMessages[:i]:
+                    decreaseCompetenceBelief()
+
+                # If the previous message is also of the type 'Search', but
+                # for a DIFFERENT ROOM, the willingness level will drop, since
+                # the human clearly lied about searching in room x earlier...
+                # Willingness-drop, since, by lying, the human shows not to be
+                # really willing to solve this task quickly.
+                if prevMessage and 'Search' in prevMessage and not message == prevMessage:
+                    decreaseWillingnessBelief()
+
+
+                # If the previous message says 'Found', meaning that the human found a victim
+                # but was not motivated to 'Collect' that victim, the willingness belief drops
+                if prevMessage and 'Found' in prevMessage:
+                    decreaseWillingnessBelief()
+
+
+            # If the human messages that he/she has found a victim (mildly or critically injured)
+            # the robot's competence-belief will increase
+            # (the human was capable of finding a victim)
+            if 'Found' in message:
+
+                # Finding a victim increases the competence belief
+                increaseCompetenceBelief()
+
+                # If the human messages 'Found' directly after a 'Found':
+                # it was decided not to alter the competence- or willingness-beliefs here.
+                if prevMessage and 'Found' in prevMessage:
+                    pass
+
+
+
+            # If the human messages that he/she will collect a victim
+            # the robot's willingness-belief will increase
+            # (the human was motivated to collect the victim)
             if 'Collect' in message:
-                trustBeliefs[self._humanName]['competence']+=0.10
-                # Restrict the competence belief to a range of -1 to 1
-                trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
+
+                # Telling the robot that you're going to 'Collect' a victim increases
+                # both willingness- and competence-belief
+                increaseWillingnessBelief()
+                increaseCompetenceBelief()
+
+            if 'Rescue alone' in message:
+                increaseWillingnessBelief(0.25)
+
+            if 'Rescue together' in message:
+                increaseWillingnessBelief(0.25)
+
+            if 'Remove at:' in message:
+                increaseWillingnessBelief(0.25)
+
+
+
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
         with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
