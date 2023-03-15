@@ -15,6 +15,15 @@ from matrx.messages.message import Message
 from matrx.messages.message_manager import MessageManager
 from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, DropObjectTogether, CarryObject, Drop
 
+evaluation = {
+    'NEVER-TRUST': -1,
+    'ALWAYS-TRUST': 1,
+    'RANDOM-TRUST': {
+        'competence': random.uniform(-1, 1),
+        'willingness': random.uniform(-1, 1)
+    }
+}
+
 class Phase(enum.Enum):
     INTRO = 1,
     FIND_NEXT_GOAL = 2,
@@ -37,8 +46,8 @@ class Phase(enum.Enum):
     ENTER_ROOM = 19
 
 class BaselineAgent(ArtificialBrain):
-    def __init__(self, slowdown, condition, name, folder):
-        super().__init__(slowdown, condition, name, folder)
+    def __init__(self, slowdown, condition, name, eval_type, folder):
+        super().__init__(slowdown, condition, name, eval_type, folder)
         # Initialization of some relevant variables
         self._slowdown = slowdown
         self._condition = condition
@@ -70,6 +79,7 @@ class BaselineAgent(ArtificialBrain):
         self._recentVic = None
         self._receivedMessages = []
         self._moving = False
+        self._eval_type = eval_type
 
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -672,7 +682,6 @@ class BaselineAgent(ArtificialBrain):
         '''
         process incoming messages received from the team members
         '''
-        
         receivedMessages = {}
         # Create a dictionary with a list of received messages from each team member
         for member in teamMembers:
@@ -772,27 +781,34 @@ class BaselineAgent(ArtificialBrain):
         # Create a dictionary with trust values for all team members
         trustBeliefs = {}
         # Set a default starting trust value
-        default = 0.5
-        trustfile_header = []
-        trustfile_contents = []
-        # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
-        with open(folder+'/beliefs/allTrustBeliefs.csv') as csvfile:
-            reader = csv.reader(csvfile, delimiter=';', quotechar="'")
-            for row in reader:
-                if trustfile_header==[]:
-                    trustfile_header=row
-                    continue
-                # Retrieve trust values 
-                if row and row[0]==self._humanName:
-                    name = row[0]
-                    competence = float(row[1])
-                    willingness = float(row[2])
-                    trustBeliefs[name] = {'competence': competence, 'willingness': willingness}
-                # Initialize default trust values
-                if row and row[0]!=self._humanName:
-                    competence = default
-                    willingness = default
-                    trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+        default = evaluation.get(self._eval_type, 0.5)
+        if self._eval_type is None:
+            trustfile_header = []
+            trustfile_contents = []
+            # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
+            with open(folder + '/beliefs/allTrustBeliefs.csv') as csvfile:
+                reader = csv.reader(csvfile, delimiter=';', quotechar="'")
+                for row in reader:
+                    if trustfile_header == []:
+                        trustfile_header = row
+                        continue
+                    # Retrieve trust values
+                    if row and row[0] == self._humanName:
+                        name = row[0]
+                        competence = float(row[1])
+                        willingness = float(row[2])
+                        trustBeliefs[name] = {'competence': competence, 'willingness': willingness}
+                    # Initialize default trust values
+                    if row and row[0] != self._humanName:
+                        competence = default
+                        willingness = default
+                        trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+        else:
+            # Evaluating, therefore no need to read csv file
+            competence = default if self._eval_type != 'RANDOM-TRUST' else default['competence']
+            willingness = default if self._eval_type != 'RANDOM-TRUST' else default['willingness']
+            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+
         return trustBeliefs
 
     def _trustBelief(self, members, trustBeliefs, folder, receivedMessages):
@@ -802,15 +818,18 @@ class BaselineAgent(ArtificialBrain):
         # Update the trust value based on for example the received messages
         for message in receivedMessages:
             # Increase agent trust in a team member that rescued a victim
-            if 'Collect' in message:
+            if 'Collect' in message and self._eval_type is None:
+                # If evaluating, therefore don't update trust values
                 trustBeliefs[self._humanName]['competence']+=0.10
                 # Restrict the competence belief to a range of -1 to 1
                 trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
-        # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
-        with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(['name','competence','willingness'])
-            csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness']])
+
+                # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
+                with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
+                    csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    csv_writer.writerow(['name', 'competence', 'willingness'])
+                    csv_writer.writerow([self._humanName, trustBeliefs[self._humanName]['competence'],
+                                         trustBeliefs[self._humanName]['willingness']])
 
         return trustBeliefs
 
