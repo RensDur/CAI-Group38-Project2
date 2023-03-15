@@ -14,6 +14,7 @@ from matrx.actions.move_actions import MoveNorth
 from matrx.messages.message import Message
 from matrx.messages.message_manager import MessageManager
 from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, DropObjectTogether, CarryObject, Drop
+from classes.ReceivedMessageState import ReceivedMessageState
 
 class Phase(enum.Enum):
     INTRO = 1,
@@ -70,6 +71,9 @@ class BaselineAgent(ArtificialBrain):
         self._recentVic = None
         self._receivedMessages = []
         self._moving = False
+
+        # Added state containers
+        self._receivedMessageStates = []
 
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -799,6 +803,19 @@ class BaselineAgent(ArtificialBrain):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
+
+        # If a new message was added to the receivedMessages list, but has not yet been updated in the
+        # self._receivedMessageStates container, add this message
+        if len(receivedMessages) > len(self._receivedMessageStates):
+            self._receivedMessageStates.append(ReceivedMessageState(
+                msg=receivedMessages[-1],
+                time=0,
+                dist=self._distanceHuman[-1],
+                robot_msg=self._sendMessages,
+                found_vic=self._foundVictims,
+                collected_vic=self._collectedVictims
+            ))
+
 
         # Define functions increase/decreaseWillingnessBelief and increase/decreaseCompetenceBelief
         willingnessUpdateSpeed = 0.03
