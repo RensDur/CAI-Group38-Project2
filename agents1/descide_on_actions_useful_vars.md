@@ -242,3 +242,8 @@ _Some interesting decisions are made, but I don't think we should take these int
 ## Phase 14: DROP_VICTIM
 
 **NO INTERESTING DECISIONS ARE MADE IN THIS PHASE**
+
+
+
+Willingness = eigen initiatief | beschikbaarbaarheid voor hulp | motivatie om de taak te voltooien
+Competence  = goed geheugen | snelste route kiezen | weak/normal/strong | 
