@@ -16,6 +16,15 @@ from matrx.messages.message_manager import MessageManager
 from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, DropObjectTogether, CarryObject, Drop
 from classes.ReceivedMessageState import ReceivedMessageState
 
+evaluation = {
+    'NEVER-TRUST': -1,
+    'ALWAYS-TRUST': 1,
+    'RANDOM-TRUST': {
+        'competence': random.uniform(-1, 1),
+        'willingness': random.uniform(-1, 1)
+    }
+}
+
 class Phase(enum.Enum):
     INTRO = 1,
     FIND_NEXT_GOAL = 2,
@@ -38,8 +47,8 @@ class Phase(enum.Enum):
     ENTER_ROOM = 19
 
 class BaselineAgent(ArtificialBrain):
-    def __init__(self, slowdown, condition, name, folder):
-        super().__init__(slowdown, condition, name, folder)
+    def __init__(self, slowdown, condition, name, eval_type, folder):
+        super().__init__(slowdown, condition, name, eval_type, folder)
         # Initialization of some relevant variables
         self._slowdown = slowdown
         self._condition = condition
@@ -71,6 +80,7 @@ class BaselineAgent(ArtificialBrain):
         self._recentVic = None
         self._receivedMessages = []
         self._moving = False
+        self._eval_type = eval_type
 
         # Added state containers
         self._receivedMessageStates = []
@@ -676,7 +686,6 @@ class BaselineAgent(ArtificialBrain):
         '''
         process incoming messages received from the team members
         '''
-        
         receivedMessages = {}
         # Create a dictionary with a list of received messages from each team member
         for member in teamMembers:
@@ -776,27 +785,34 @@ class BaselineAgent(ArtificialBrain):
         # Create a dictionary with trust values for all team members
         trustBeliefs = {}
         # Set a default starting trust value
-        default = 0.5
-        trustfile_header = []
-        trustfile_contents = []
-        # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
-        with open(folder+'/beliefs/allTrustBeliefs.csv') as csvfile:
-            reader = csv.reader(csvfile, delimiter=';', quotechar="'")
-            for row in reader:
-                if trustfile_header==[]:
-                    trustfile_header=row
-                    continue
-                # Retrieve trust values 
-                if row and row[0]==self._humanName:
-                    name = row[0]
-                    competence = float(row[1])
-                    willingness = float(row[2])
-                    trustBeliefs[name] = {'competence': competence, 'willingness': willingness}
-                # Initialize default trust values
-                if row and row[0]!=self._humanName:
-                    competence = default
-                    willingness = default
-                    trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+        default = evaluation.get(self._eval_type, 0.5)
+        if self._eval_type is None:
+            trustfile_header = []
+            trustfile_contents = []
+            # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
+            with open(folder + '/beliefs/allTrustBeliefs.csv') as csvfile:
+                reader = csv.reader(csvfile, delimiter=';', quotechar="'")
+                for row in reader:
+                    if trustfile_header == []:
+                        trustfile_header = row
+                        continue
+                    # Retrieve trust values
+                    if row and row[0] == self._humanName:
+                        name = row[0]
+                        competence = float(row[1])
+                        willingness = float(row[2])
+                        trustBeliefs[name] = {'competence': competence, 'willingness': willingness}
+                    # Initialize default trust values
+                    if row and row[0] != self._humanName:
+                        competence = default
+                        willingness = default
+                        trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+        else:
+            # Evaluating, therefore no need to read csv file
+            competence = default if self._eval_type != 'RANDOM-TRUST' else default['competence']
+            willingness = default if self._eval_type != 'RANDOM-TRUST' else default['willingness']
+            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+
         return trustBeliefs
 
     def _trustBelief(self, members, trustBeliefs, folder, receivedMessages):
@@ -878,66 +894,66 @@ class BaselineAgent(ArtificialBrain):
             # If the human messages that he/she will search room x,
             # the robot's willingness-belief will increase
             # (the human was motivated to search room x)
-            if 'Search' in message:
+            if self._eval_type is not None:
+                if 'Search' in message:
 
-                # The willingness belief will increase
-                increaseWillingnessBelief()
+                    # The willingness belief will increase
+                    increaseWillingnessBelief()
 
-                # If this exact room has already been searched earlier,
-                # the competence belief will drop, since the human wasn't capable
-                # of remembering that this room has already been searched.
-                if message in receivedMessages[:i]:
-                    decreaseCompetenceBelief()
+                    # If this exact room has already been searched earlier,
+                    # the competence belief will drop, since the human wasn't capable
+                    # of remembering that this room has already been searched.
+                    if message in receivedMessages[:i]:
+                        decreaseCompetenceBelief()
 
-                # If the previous message is also of the type 'Search', but
-                # for a DIFFERENT ROOM, the willingness level will drop, since
-                # the human clearly lied about searching in room x earlier...
-                # Willingness-drop, since, by lying, the human shows not to be
-                # really willing to solve this task quickly.
-                if prevMessage and 'Search' in prevMessage and not message == prevMessage:
-                    decreaseWillingnessBelief(0.5)
-
-
-                # If the previous message says 'Found', meaning that the human found a victim
-                # but was not motivated to 'Collect' that victim, the willingness belief drops
-                if prevMessage and 'Found' in prevMessage:
-                    decreaseWillingnessBelief()
+                    # If the previous message is also of the type 'Search', but
+                    # for a DIFFERENT ROOM, the willingness level will drop, since
+                    # the human clearly lied about searching in room x earlier...
+                    # Willingness-drop, since, by lying, the human shows not to be
+                    # really willing to solve this task quickly.
+                    if prevMessage and 'Search' in prevMessage and not message == prevMessage:
+                        decreaseWillingnessBelief(0.5)
 
 
-            # If the human messages that he/she has found a victim (mildly or critically injured)
-            # the robot's competence-belief will increase
-            # (the human was capable of finding a victim)
-            if 'Found' in message:
-
-                # Finding a victim increases the competence belief
-                increaseCompetenceBelief()
-
-                # If the human messages 'Found' directly after a 'Found':
-                # it was decided not to alter the competence- or willingness-beliefs here.
-                if prevMessage and 'Found' in prevMessage:
-                    pass
+                    # If the previous message says 'Found', meaning that the human found a victim
+                    # but was not motivated to 'Collect' that victim, the willingness belief drops
+                    if prevMessage and 'Found' in prevMessage:
+                        decreaseWillingnessBelief()
 
 
+                # If the human messages that he/she has found a victim (mildly or critically injured)
+                # the robot's competence-belief will increase
+                # (the human was capable of finding a victim)
+                if 'Found' in message:
 
-            # If the human messages that he/she will collect a victim
-            # the robot's willingness-belief will increase
-            # (the human was motivated to collect the victim)
-            if 'Collect' in message:
+                    # Finding a victim increases the competence belief
+                    increaseCompetenceBelief()
 
-                # Telling the robot that you're going to 'Collect' a victim increases
-                # both willingness- and competence-belief
-                increaseWillingnessBelief()
-                increaseCompetenceBelief()
+                    # If the human messages 'Found' directly after a 'Found':
+                    # it was decided not to alter the competence- or willingness-beliefs here.
+                    if prevMessage and 'Found' in prevMessage:
+                        pass
 
-            if 'Rescue alone' in message:
-                increaseWillingnessBelief(0.25)
 
-            if 'Rescue together' in message:
-                increaseWillingnessBelief(0.25)
 
-            if 'Remove at:' in message:
-                increaseWillingnessBelief(0.25)
+                # If the human messages that he/she will collect a victim
+                # the robot's willingness-belief will increase
+                # (the human was motivated to collect the victim)
+                if 'Collect' in message:
 
+                    # Telling the robot that you're going to 'Collect' a victim increases
+                    # both willingness- and competence-belief
+                    increaseWillingnessBelief()
+                    increaseCompetenceBelief()
+
+                if 'Rescue alone' in message:
+                    increaseWillingnessBelief(0.25)
+
+                if 'Rescue together' in message:
+                    increaseWillingnessBelief(0.25)
+
+                if 'Remove at:' in message:
+                    increaseWillingnessBelief(0.25)
 
 
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
