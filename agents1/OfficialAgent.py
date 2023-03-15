@@ -95,11 +95,6 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
-        def getCurrentWillingnessBelief(self, trustBeliefs):
-            return trustBeliefs[self._humanName]['willingness']
-    
-        def getCurrentCompetenceBelief(self, trustBeliefs):
-            return trustBeliefs[self._humanName]['competence']
 
         # Identify team members
         agent_name = state[self.agent_id]['obj_id']
@@ -125,6 +120,13 @@ class BaselineAgent(ArtificialBrain):
             self._folder,
             self._receivedMessages
         )
+
+        # Functions that can be used to retrieve the current trust-beliefs
+        def getCurrentWillingnessBelief():
+            return trustBeliefs[self._humanName]['willingness']
+    
+        def getCurrentCompetenceBelief():
+            return trustBeliefs[self._humanName]['competence']
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:

@@ -34,7 +34,7 @@ These are placed inside the scope of ```decide_on_actions()```.
 |---------------------------|-----------------------|---------------|
 |```self._goalVic```        |Target victim to rescue next| ~Victim|
 |```self._goalLoc```        |Target location to move next| ~Location|
-|```self._rescue```         |Diretive for the robot to start rescuing a victim   | None or 'alone' or 'together'|
+|```self._rescue```         |Directive for the robot to start rescuing a victim   | None or 'alone' or 'together'|
 |   |   |   |
 
 

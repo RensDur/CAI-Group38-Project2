@@ -1,5 +1,4 @@
 __pycache__/
 .idea
 logs
-beliefs/currentTrustBelief.csv
-beliefs/allTrustBeliefs.csv
+beliefs
