@@ -84,7 +84,7 @@ class BaselineAgent(ArtificialBrain):
 
         # Added state containers
         self._receivedMessageStates = []
-
+    
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
         self._state_tracker = StateTracker(agent_id=self.agent_id)
@@ -95,6 +95,12 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
+        def getCurrentWillingnessBelief(self, trustBeliefs):
+            return trustBeliefs[self._humanName]['willingness']
+    
+        def getCurrentCompetenceBelief(self, trustBeliefs):
+            return trustBeliefs[self._humanName]['competence']
+
         # Identify team members
         agent_name = state[self.agent_id]['obj_id']
         for member in state['World']['team_members']:
@@ -108,8 +114,17 @@ class BaselineAgent(ArtificialBrain):
         # Process messages from team members
         self._processMessages(state, self._teamMembers, self._condition)
         # Initialize and update trust beliefs for team members
-        trustBeliefs = self._loadBelief(self._teamMembers, self._folder)
-        self._trustBelief(self._teamMembers, trustBeliefs, self._folder, self._receivedMessages)
+
+        # trustBeliefs = self._loadBelief(self._teamMembers, self._folder)
+        # trustBeliefs = self._trustBelief(self._teamMembers, trustBeliefs, self._folder, self._receivedMessages)
+        # I edited the above line to actually incorporate changes in the trust beliefs...
+        # Code below does exactly the same thing, but easier readable
+        trustBeliefs = self._trustBelief(
+            self._teamMembers,
+            self._loadBelief(self._teamMembers, self._folder),
+            self._folder,
+            self._receivedMessages
+        )
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:
@@ -162,6 +177,7 @@ class BaselineAgent(ArtificialBrain):
                 else:
                     return None, {}
 
+            # Phase 1
             if Phase.FIND_NEXT_GOAL == self._phase:
                 # Definition of some relevant variables
                 self._answered = False
@@ -229,6 +245,7 @@ class BaselineAgent(ArtificialBrain):
                     if vic not in self._foundVictims or vic in self._foundVictims and vic in self._todo and len(self._searchedRooms)>0:
                         self._phase = Phase.PICK_UNSEARCHED_ROOM
 
+            # Phase 2
             if Phase.PICK_UNSEARCHED_ROOM == self._phase:
                 agent_location = state[self.agent_id]['location']
                 # Identify which areas are not explored yet
@@ -239,6 +256,7 @@ class BaselineAgent(ArtificialBrain):
                                    and room['room_name'] not in self._tosearch]
                 # If all areas have been searched but the task is not finished, start searching areas again
                 if self._remainingZones and len(unsearchedRooms) == 0:
+                    # TODO: something went wrong, update trust belief
                     self._tosearch = []
                     self._searchedRooms = []
                     self._sendMessages = []
@@ -268,6 +286,7 @@ class BaselineAgent(ArtificialBrain):
                             self._doormat = (3, 5)
                         self._phase = Phase.PLAN_PATH_TO_ROOM
 
+            # Phase 3
             if Phase.PLAN_PATH_TO_ROOM == self._phase:
                 self._navigator.reset_full()
                 # Switch to a different area when the human found a victim
@@ -286,6 +305,7 @@ class BaselineAgent(ArtificialBrain):
                 # Follow the route to the next area to search
                 self._phase = Phase.FOLLOW_PATH_TO_ROOM
 
+            # Phase 4
             if Phase.FOLLOW_PATH_TO_ROOM == self._phase:
                 # Find the next victim to rescue if the previously identified target victim was rescued by the human
                 if self._goalVic and self._goalVic in self._collectedVictims:
@@ -309,7 +329,7 @@ class BaselineAgent(ArtificialBrain):
                             self._sendMessage('Moving to ' + str(self._door['room_name']) + ' to pick up ' + self._goalVic + ' together with you.', 'RescueBot')
                         else:
                             self._sendMessage('Moving to ' + str(self._door['room_name']) + ' to pick up ' + self._goalVic + '.', 'RescueBot')
-                    if self._goalVic not in self._foundVictims and not self._remove or not self._goalVic and not self._remove :
+                    if self._goalVic not in self._foundVictims and not self._remove or not self._goalVic and not self._remove:
                         self._sendMessage('Moving to ' + str(self._door['room_name']) + ' because it is the closest unsearched area.', 'RescueBot')
                     self._currentDoor = self._door['location']
                     # Retrieve move actions to execute
@@ -325,6 +345,7 @@ class BaselineAgent(ArtificialBrain):
                     # Identify and remove obstacles if they are blocking the entrance of the area
                     self._phase = Phase.REMOVE_OBSTACLE_IF_NEEDED
 
+            # Phase 5
             if Phase.REMOVE_OBSTACLE_IF_NEEDED == self._phase:
                 objects = []
                 agent_location = state[self.agent_id]['location']
@@ -446,6 +467,7 @@ class BaselineAgent(ArtificialBrain):
                     self._waiting = False
                     self._phase = Phase.ENTER_ROOM
 
+            # Phase 6
             if Phase.ENTER_ROOM == self._phase:
                 self._answered = False
                 # If the target victim is rescued by the human, identify the next victim to rescue
@@ -468,6 +490,7 @@ class BaselineAgent(ArtificialBrain):
                         return action, {}
                     self._phase = Phase.PLAN_ROOM_SEARCH_PATH
 
+            # Phase 7
             if Phase.PLAN_ROOM_SEARCH_PATH == self._phase:
                 self._agentLoc = int(self._door['room_name'].split()[-1])
                 # Store the locations of all area tiles
@@ -483,6 +506,7 @@ class BaselineAgent(ArtificialBrain):
                 self._roomVics = []
                 self._phase = Phase.FOLLOW_ROOM_SEARCH_PATH
 
+            # Phase 8
             if Phase.FOLLOW_ROOM_SEARCH_PATH == self._phase:
                 # Search the area
                 self._state_tracker.update(state)
