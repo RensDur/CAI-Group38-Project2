@@ -16,12 +16,14 @@ These are placed inside the scope of ```decide_on_actions()```.
 
 |Variable                   |Meaning                |Possible values|
 |---------------------------|-----------------------|---------------|
-|```self._searchedRooms```  |Rooms that have been searched by the robot or human | List[~Rooms]|
+|```self._searchedRooms```  |Rooms that have been searched by the robot or human | List[~Room]|
 |```self._distanceHuman```  |Distance between the robot and the human   |'close' or 'far'|
 |```self._distanceDrop```   |Distance from the robot to the drop-zone   |'close' or 'far'   |
+|```self._roomVics```       |List of victims in the current room        |List[~Victim]|
+|```self._recentVic```      |Recently (or currently) considered victim  |~Victim|
 |```remainingZones```       |Remaining drop zones                       |List[~Zone-Info]   |
-|```remainingVics```        |Remaining victims                          |List[~Victims]   |
-|```remaining```            |Location of remaining victims|List[~Locations]<Br>_indexed by ~Victims_|
+|```remainingVics```        |Remaining victims                          |List[~Victim]   |
+|```remaining```            |Location of remaining victims|List[~Location]<Br>_indexed by ~Victims_|
 |   |   |   |
 
 
@@ -32,7 +34,7 @@ These are placed inside the scope of ```decide_on_actions()```.
 |---------------------------|-----------------------|---------------|
 |```self._goalVic```        |Target victim to rescue next| ~Victim|
 |```self._goalLoc```        |Target location to move next| ~Location|
-|```self._rescue```         |   | None or 'alone' or 'together'|
+|```self._rescue```         |Diretive for the robot to start rescuing a victim   | None or 'alone' or 'together'|
 |   |   |   |
 
 
@@ -146,62 +148,97 @@ if 'critical' in vic and self._answered == False and not self._waiting:
     self._waiting = True
 ```
 
-## Phase 9: PLAN_PATH_TO_VICTIM
 
-**_Descibe the condition_**
+<hr>
 
-_Describe the action that the robot takes accordingly_
+**The robot discovered that the victim, about which it learned it was located in room A, is in fact not there**
+
+_Communicate that the agent did not find the target victim in the are, while the human previously communicted the victim was located there._
 
 ```python
-
+if self._goalVic in self._foundVictims and self._goalVic not in self._roomVics and self._foundVictimLocs[self._goalVic]['room'] == self._door['room_name']:
 ```
+
+<hr>
+
+**The RescueBot received a message from the human saying it wants to rescue a critically injured victim**
+
+_Rescue the victim, together with the human_
+
+```python
+if self.received_messages_content and self.received_messages_content[-1] == 'Rescue' and 'critical' in self._recentVic:
+    self._rescue = 'together'
+```
+
+<hr>
+
+**The RescueBot received a message from the human saying it wants to rescue a mildly injured victim, together**
+
+_Rescue the victim, together with the human_
+
+```python
+if self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
+    self._rescue = 'together'
+```
+
+<hr>
+
+**The RescueBot received a message from the human saying it should rescue a mildly injured victim alone.**
+
+_Rescue the victim, without help from the human_
+
+```python
+if self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic:
+    [...]
+    self._rescue = 'alone'
+```
+
+<hr>
+
+**The human says that the robot should continue searching rooms**
+
+_Do as the human instructed_
+
+```python
+if self.received_messages_content and self.received_messages_content[-1] == 'Continue':
+    [...]
+    self._todo.append(self._recentVic)
+    self._recentVic = None
+    PHASE -> FIND_NEXT_GOAL
+```
+
+<hr>
+
+**The robot hasn't heard from the human yet, about whether to rescue the victim or not**
+
+_Wait indefinetely_
+
+```python
+if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
+    return None, {}
+```
+
+
+## Phase 9: PLAN_PATH_TO_VICTIM
+
+**NO INTERESTING DECISIONS ARE MADE IN THIS PHASE**
 
 ## Phase 10: FOLLOW_PATH_TO_VICTIM
 
-**_Descibe the condition_**
-
-_Describe the action that the robot takes accordingly_
-
-```python
-
-```
+**NO INTERESTING DECISIONS ARE MADE IN THIS PHASE**
 
 ## Phase 11: TAKE_VICTIM
 
-**_Descibe the condition_**
-
-_Describe the action that the robot takes accordingly_
-
-```python
-
-```
+_Some interesting decisions are made, but I don't think we should take these into consideration_ ~Rens
 
 ## Phase 12: PLAN_PATH_TO_DROPPOINT
 
-**_Descibe the condition_**
-
-_Describe the action that the robot takes accordingly_
-
-```python
-
-```
+**NO INTERESTING DECISIONS ARE MADE IN THIS PHASE**
 
 ## Phase 13: FOLLOW_PATH_TO_DROPPOINT
 
-**_Descibe the condition_**
-
-_Describe the action that the robot takes accordingly_
-
-```python
-
-```
+**NO INTERESTING DECISIONS ARE MADE IN THIS PHASE**
 
 ## Phase 14: DROP_VICTIM
 
-**_Descibe the condition_**
-
-_Describe the action that the robot takes accordingly_
-
-```python
-
-```
+**NO INTERESTING DECISIONS ARE MADE IN THIS PHASE**
