@@ -99,6 +99,7 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
+        print("hoi")
 
         # Identify team members
         agent_name = state[self.agent_id]['obj_id']
@@ -221,10 +222,6 @@ class BaselineAgent(ArtificialBrain):
             self._todo.append(self._recentVic)
             self._recentVic = None
             self._phase = Phase.FIND_NEXT_GOAL
-
-        def robot_decides_alone():
-            # TODO: return boolean indicating if we let the robot decide on its own and thus not ask the human to make a decision
-
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:
@@ -743,7 +740,7 @@ class BaselineAgent(ArtificialBrain):
                                         self._waiting = True
                                         
                                 if 'critical' in vic and self._answered == False and not self._waiting:
-                                    
+
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue" or "Continue" searching. \n\n \
                                         Important features to consider are: \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \n safe - victims rescued: ' + str(self._collectedVictims) + '\n \
                                         afstand - distance between us: ' + self._distanceHuman,'RescueBot')
