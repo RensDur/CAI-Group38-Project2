@@ -82,6 +82,9 @@ class BaselineAgent(ArtificialBrain):
         self._moving = False
         self._eval_type = eval_type
 
+        # Keep track of the number of ticks since the start of the game
+        self._ticks_since_start = 0
+
         # Added state containers
         self._receivedMessageStates = []
     
@@ -91,10 +94,12 @@ class BaselineAgent(ArtificialBrain):
         self._navigator = Navigator(agent_id=self.agent_id,action_set=self.action_set, algorithm=Navigator.A_STAR_ALGORITHM)
 
     def filter_observations(self, state):
-        # Filtering of the world state before deciding on an action 
+        # Filtering of the world state before deciding on an action
         return state
 
     def decide_on_actions(self, state):
+
+        self._ticks_since_start += 1
 
         # Identify team members
         agent_name = state[self.agent_id]['obj_id']
@@ -915,17 +920,19 @@ class BaselineAgent(ArtificialBrain):
                         name = row[0]
                         competence = float(row[1])
                         willingness = float(row[2])
-                        trustBeliefs[name] = {'competence': competence, 'willingness': willingness}
+                        confidence = float(row[3])
+                        trustBeliefs[name] = {'competence': competence, 'willingness': willingness, 'confidence': confidence}
                     # Initialize default trust values
                     if row and row[0] != self._humanName:
                         competence = default
                         willingness = default
-                        trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+                        confidence = 1.0
+                        trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': confidence}
         else:
             # Evaluating, therefore no need to read csv file
             competence = default if self._eval_type != 'RANDOM-TRUST' else default['competence']
             willingness = default if self._eval_type != 'RANDOM-TRUST' else default['willingness']
-            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
+            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 1.0}
 
         return trustBeliefs
 
@@ -942,7 +949,7 @@ class BaselineAgent(ArtificialBrain):
         if len(receivedMessages) > len(self._receivedMessageStates):
             self._receivedMessageStates.append(ReceivedMessageState(
                 msg=receivedMessages[-1],
-                time=0,
+                time=self._ticks_since_start,
                 dist=self._distanceHuman[-1],
                 robot_msg=self._sendMessages,
                 found_vic=self._foundVictims,
@@ -992,11 +999,11 @@ class BaselineAgent(ArtificialBrain):
             i = index - 1
             while i >= 0:
                 if not 'Continue' in msgs[i]:
-                    return msgs[i]
+                    return msgs[i], i
 
                 i -= 1
 
-            return None
+            return None, -1
 
 
         # Update the trust value based on for example the received messages
@@ -1015,13 +1022,24 @@ class BaselineAgent(ArtificialBrain):
 
 
             # Find the previous message and store it temporarily
-            prevMessage = findPreviousMessageSkipContinue(receivedMessages, i)
+            prevMessage, i_p = findPreviousMessageSkipContinue(receivedMessages, i)
 
 
-            # If the human messages that he/she will search room x,
-            # the robot's willingness-belief will increase
-            # (the human was motivated to search room x)
             if self._eval_type is not None:
+
+                # If there's less than 10 seconds between this message and the previous one:
+                #   give a willingness increase
+                if prevMessage and self._receivedMessageStates[i].time - self._receivedMessageStates[i_p].time < 10*10:
+                    increaseWillingnessBelief()
+
+                # If there's more than 15 seconds between this message and the previous one:
+                #   give a willingness decrease
+                if prevMessage and self._receivedMessageStates[i].time - self._receivedMessageStates[i_p].time > 15*10:
+                    decreaseWillingnessBelief()
+
+                # If the human messages that he/she will search room x,
+                # the robot's willingness-belief will increase
+                # (the human was motivated to search room x)
                 if 'Search' in message:
 
                     # The willingness belief will increase
@@ -1074,7 +1092,7 @@ class BaselineAgent(ArtificialBrain):
                     increaseCompetenceBelief()
 
                 if 'Rescue alone' in message:
-                    increaseWillingnessBelief(0.25)
+                    decreaseWillingnessBelief(0.25)
 
                 if 'Rescue together' in message:
                     increaseWillingnessBelief(0.25)
