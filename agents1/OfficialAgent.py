@@ -25,6 +25,7 @@ evaluation = {
     }
 }
 
+
 class Phase(enum.Enum):
     INTRO = 1,
     FIND_NEXT_GOAL = 2,
@@ -84,6 +85,9 @@ class BaselineAgent(ArtificialBrain):
 
         # Added state containers
         self._receivedMessageStates = []
+
+        # keep track of the time the robot waits for a response
+        self._waiting_time = 0
     
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -190,6 +194,24 @@ class BaselineAgent(ArtificialBrain):
         
         def confidenceIsHigh() -> bool:
             getCurrentConfidence() > 0.75
+
+        def stay_idle(willingness, time):
+            if willingnessIsLow and time < 300:
+                return True 
+            if willingnessIsMedium and time < 600:
+                return True 
+            if willingnessIsHigh and time < 6000:
+                return True 
+            return False
+
+        def do_not_remove():
+            # reset waiting time
+            self._waiting_time = 0
+            self._answered = True
+            self._waiting = False
+            # Add area to the to do list
+            self._tosearch.append(self._door['room_name'])
+            self._phase = Phase.FIND_NEXT_GOAL
 
 
         # Check whether human is close in distance
@@ -429,33 +451,52 @@ class BaselineAgent(ArtificialBrain):
                             self._waiting = True                          
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
-                            self._answered = True
-                            self._waiting = False
-                            # Add area to the to do list
-                            self._tosearch.append(self._door['room_name'])
-                            self._phase = Phase.FIND_NEXT_GOAL
+                            # go to new phase
+                            do_not_remove()
+
                         # Wait for the human to help removing the obstacle and remove the obstacle together
                         if self.received_messages_content and self.received_messages_content[-1] == 'Remove' or self._remove:
+                            # reset waiting time
+                            self._waiting_time = 0
                             if not self._remove:
                                 self._answered = True
                             # Tell the human to come over and be idle untill human arrives
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
-                                return None, {}
+                                # increase waiting time
+                                self._waiting_time += 1
+                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                    return None, {}
+                                else:
+                                    # go to new phase
+                                    do_not_remove()
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
+                                # reset waiting time
+                                self._waiting_time = 0
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
-                                return None, {}
+                                # increase waiting time
+                                self._waiting_time += 1
+                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                    return None, {}
+                                else:
+                                    # go to new phase
+                                    do_not_remove()
                         # Remain idle untill the human communicates what to do with the identified obstacle 
 ######################### TODO: call trustbelief to influence decision (dont wait forever?)          
                         else:
-                            return None, {}
+                            # increase waiting time
+                            self._waiting_time += 1
+                            if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                return None, {} 
+                            else:
+                                # go to new phase
+                                do_not_remove()
 
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info['obj_id']:
                         objects.append(info)
                         # Communicate which obstacle is blocking the entrance
 ####################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
-
                         if self._answered == False and not self._remove and not self._waiting:
                             self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
                                 Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + ' \
@@ -463,11 +504,8 @@ class BaselineAgent(ArtificialBrain):
                             self._waiting = True
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
-                            self._answered = True
-                            self._waiting = False
-                            # Add area to the to do list
-                            self._tosearch.append(self._door['room_name'])
-                            self._phase = Phase.FIND_NEXT_GOAL
+                            # go to new phase
+                            do_not_remove()
                         # Remove the obstacle if the human tells the agent to do so
                         if self.received_messages_content and self.received_messages_content[-1] == 'Remove' or self._remove:
                             if not self._remove:
@@ -482,7 +520,13 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle untill the human communicates what to do with the identified obstacle
 ######################### TODO: call trustbelief to influence decision (dont wait forever?)          
                         else:
-                            return None, {}
+                            # increase waiting time
+                            self._waiting_time += 1
+                            if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                return None, {} 
+                            else:
+                                # go to new phase
+                                do_not_remove()
 
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in info['obj_id']:
                         objects.append(info)
@@ -496,11 +540,8 @@ class BaselineAgent(ArtificialBrain):
                             self._waiting = True
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle          
                         if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
-                            self._answered = True
-                            self._waiting = False
-                            # Add area to the to do list
-                            self._tosearch.append(self._door['room_name'])
-                            self._phase = Phase.FIND_NEXT_GOAL
+                            # go to new phase
+                            do_not_remove()
                         # Remove the obstacle alone if the human decides so
                         if self.received_messages_content and self.received_messages_content[-1] == 'Remove alone' and not self._remove:
                             self._answered = True
@@ -516,16 +557,34 @@ class BaselineAgent(ArtificialBrain):
                             # Tell the human to come over and be idle untill human arrives
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove stones together.','RescueBot')
-                                return None, {}
+                                # increase waiting time
+                                self._waiting_time += 1
+                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                    return None, {}
+                                else:
+                                    # go to new phase
+                                    do_not_remove()
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
                                 self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!','RescueBot')
-                                return None, {}
+                                # increase waiting time
+                                self._waiting_time += 1
+                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                    return None, {}
+                                else:
+                                    # go to new phase
+                                    do_not_remove()
                         # Remain idle until the human communicates what to do with the identified obstacle
 ######################### TODO: call trustbelief to influence decision (dont wait forever?)          
-
                         else:
-                            return None, {}
+                            # increase waiting time
+                            self._waiting_time += 1
+                            if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                return None, {}
+                            else:
+                                # go to new phase
+                                do_not_remove()
+
                 # If no obstacles are blocking the entrance, enter the area
                 if len(objects) == 0:
                     self._answered = False
