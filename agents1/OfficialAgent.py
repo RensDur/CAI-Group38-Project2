@@ -127,6 +127,70 @@ class BaselineAgent(ArtificialBrain):
     
         def getCurrentCompetenceBelief():
             return trustBeliefs[self._humanName]['competence']
+        
+        def getCurrentConfidence():
+            return trustBeliefs[self._humanName]['confidence']
+        
+        # A useful set of functions that can be used to determine how high/low the trust beliefs are
+        # towards the human player
+
+        # WILLINGNESS
+        def willingnessLowerThan(threshold: float) -> bool:
+            getCurrentWillingnessBelief() < threshold
+
+        def willingnessHigherThan(threshold: float) -> bool:
+            getCurrentWillingnessBelief() > threshold
+
+        def willingnessApproximately(value: float, margin: float) -> bool:
+            abs(getCurrentWillingnessBelief() - value) <= margin
+
+        def willingnessIsLow() -> bool:
+            getCurrentWillingnessBelief() < -0.5
+
+        def willingnessIsMedium() -> bool:
+            getCurrentWillingnessBelief() >= -0.5 and getCurrentWillingnessBelief() <= 0.5
+
+        def willingnessIsHigh() -> bool:
+            getCurrentWillingnessBelief() > 0.5
+
+        # COMPETENCE
+        def competenceLowerThan(threshold: float) -> bool:
+            getCurrentCompetenceBelief() < threshold
+        
+        def competenceHigherThan(threshold: float) -> bool:
+            getCurrentCompetenceBelief() > threshold
+        
+        def competenceApproximately(value: float, margin: float) -> bool:
+            abs(getCurrentCompetenceBelief() - value) <= margin
+        
+        def competenceIsLow() -> bool:
+            getCurrentCompetenceBelief() < -0.5
+        
+        def competenceIsMedium() -> bool:
+            getCurrentCompetenceBelief() >= -0.5 and getCurrentCompetenceBelief() <= 0.5
+        
+        def competenceIsHigh() -> bool:
+            getCurrentCompetenceBelief() > 0.5
+
+        # CONFIDENCE
+        def confidenceLowerThan(threshold: float) -> bool:
+            getCurrentConfidence() < threshold
+        
+        def confidenceHigherThan(threshold: float) -> bool:
+            getCurrentConfidence() > threshold
+        
+        def confidenceApproximately(value: float, margin: float) -> bool:
+            abs(getCurrentConfidence() - value) <= margin
+        
+        def confidenceIsLow() -> bool:
+            getCurrentConfidence() < 0.25
+        
+        def confidenceIsMedium() -> bool:
+            getCurrentConfidence() >= 0.25 and getCurrentConfidence() <= 0.75
+        
+        def confidenceIsHigh() -> bool:
+            getCurrentConfidence() > 0.75
+
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:
@@ -869,6 +933,9 @@ class BaselineAgent(ArtificialBrain):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
+
+        # Initialize the confidence to one
+        trustBeliefs[self._humanName]['confidence'] = 1.0
 
         # If a new message was added to the receivedMessages list, but has not yet been updated in the
         # self._receivedMessageStates container, add this message
