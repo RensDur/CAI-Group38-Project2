@@ -991,7 +991,7 @@ class BaselineAgent(ArtificialBrain):
             # Evaluating, therefore no need to read csv file
             competence = default if self._eval_type != 'RANDOM-TRUST' else default['competence']
             willingness = default if self._eval_type != 'RANDOM-TRUST' else default['willingness']
-            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 1.0}
+            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 0.5}
 
         return trustBeliefs
 
@@ -999,9 +999,6 @@ class BaselineAgent(ArtificialBrain):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
-
-        # Initialize the confidence to one
-        trustBeliefs[self._humanName]['confidence'] = 1.0
 
         # If a new message was added to the receivedMessages list, but has not yet been updated in the
         # self._receivedMessageStates container, add this message
