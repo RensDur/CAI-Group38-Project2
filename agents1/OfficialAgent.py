@@ -127,6 +127,70 @@ class BaselineAgent(ArtificialBrain):
     
         def getCurrentCompetenceBelief():
             return trustBeliefs[self._humanName]['competence']
+        
+        def getCurrentConfidence():
+            return trustBeliefs[self._humanName]['confidence']
+        
+        # A useful set of functions that can be used to determine how high/low the trust beliefs are
+        # towards the human player
+
+        # WILLINGNESS
+        def willingnessLowerThan(threshold: float) -> bool:
+            getCurrentWillingnessBelief() < threshold
+
+        def willingnessHigherThan(threshold: float) -> bool:
+            getCurrentWillingnessBelief() > threshold
+
+        def willingnessApproximately(value: float, margin: float) -> bool:
+            abs(getCurrentWillingnessBelief() - value) <= margin
+
+        def willingnessIsLow() -> bool:
+            getCurrentWillingnessBelief() < -0.5
+
+        def willingnessIsMedium() -> bool:
+            getCurrentWillingnessBelief() >= -0.5 and getCurrentWillingnessBelief() <= 0.5
+
+        def willingnessIsHigh() -> bool:
+            getCurrentWillingnessBelief() > 0.5
+
+        # COMPETENCE
+        def competenceLowerThan(threshold: float) -> bool:
+            getCurrentCompetenceBelief() < threshold
+        
+        def competenceHigherThan(threshold: float) -> bool:
+            getCurrentCompetenceBelief() > threshold
+        
+        def competenceApproximately(value: float, margin: float) -> bool:
+            abs(getCurrentCompetenceBelief() - value) <= margin
+        
+        def competenceIsLow() -> bool:
+            getCurrentCompetenceBelief() < -0.5
+        
+        def competenceIsMedium() -> bool:
+            getCurrentCompetenceBelief() >= -0.5 and getCurrentCompetenceBelief() <= 0.5
+        
+        def competenceIsHigh() -> bool:
+            getCurrentCompetenceBelief() > 0.5
+
+        # CONFIDENCE
+        def confidenceLowerThan(threshold: float) -> bool:
+            getCurrentConfidence() < threshold
+        
+        def confidenceHigherThan(threshold: float) -> bool:
+            getCurrentConfidence() > threshold
+        
+        def confidenceApproximately(value: float, margin: float) -> bool:
+            abs(getCurrentConfidence() - value) <= margin
+        
+        def confidenceIsLow() -> bool:
+            getCurrentConfidence() < 0.25
+        
+        def confidenceIsMedium() -> bool:
+            getCurrentConfidence() >= 0.25 and getCurrentConfidence() <= 0.75
+        
+        def confidenceIsHigh() -> bool:
+            getCurrentConfidence() > 0.75
+
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:
@@ -870,6 +934,9 @@ class BaselineAgent(ArtificialBrain):
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
 
+        # Initialize the confidence to one
+        trustBeliefs[self._humanName]['confidence'] = 1.0
+
         # If a new message was added to the receivedMessages list, but has not yet been updated in the
         # self._receivedMessageStates container, add this message
         if len(receivedMessages) > len(self._receivedMessageStates):
@@ -886,11 +953,13 @@ class BaselineAgent(ArtificialBrain):
         # Define functions increase/decreaseWillingnessBelief and increase/decreaseCompetenceBelief
         willingnessUpdateSpeed = 0.03
         competenceUpdateSpeed = 0.05
+        confidenceUpdateSpeed = 0.05
 
         def clipWillingnessAndCompetenceBeliefs():
             # Make sure the trustBeliefs remain between -1 and +1
             trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
             trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
+            trustBeliefs[self._humanName]['confidence'] = np.clip(trustBeliefs[self._humanName]['confidence'], 0, 1)
 
         def increaseWillingnessBelief(factor=1.0):
             trustBeliefs[self._humanName]['willingness'] += willingnessUpdateSpeed * factor
@@ -906,6 +975,14 @@ class BaselineAgent(ArtificialBrain):
 
         def decreaseCompetenceBelief(factor=1.0):
             trustBeliefs[self._humanName]['competence'] -= competenceUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def increaseConfidence(factor=1.0):
+            trustBeliefs[self._humanName]['confidence'] += confidenceUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def decreaseConfidence(factor=1.0):
+            trustBeliefs[self._humanName]['confidence'] -= confidenceUpdateSpeed * factor
             clipWillingnessAndCompetenceBeliefs()
 
 
@@ -1009,8 +1086,8 @@ class BaselineAgent(ArtificialBrain):
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
         with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(['name','competence','willingness'])
-            csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness']])
+            csv_writer.writerow(['name','competence','willingness', 'confidence'])
+            csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness'],trustBeliefs[self._humanName]['confidence']])
 
         return trustBeliefs
 
