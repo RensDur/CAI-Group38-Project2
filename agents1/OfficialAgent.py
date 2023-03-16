@@ -886,11 +886,13 @@ class BaselineAgent(ArtificialBrain):
         # Define functions increase/decreaseWillingnessBelief and increase/decreaseCompetenceBelief
         willingnessUpdateSpeed = 0.03
         competenceUpdateSpeed = 0.05
+        confidenceUpdateSpeed = 0.05
 
         def clipWillingnessAndCompetenceBeliefs():
             # Make sure the trustBeliefs remain between -1 and +1
             trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
             trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
+            trustBeliefs[self._humanName]['confidence'] = np.clip(trustBeliefs[self._humanName]['confidence'], 0, 1)
 
         def increaseWillingnessBelief(factor=1.0):
             trustBeliefs[self._humanName]['willingness'] += willingnessUpdateSpeed * factor
@@ -906,6 +908,14 @@ class BaselineAgent(ArtificialBrain):
 
         def decreaseCompetenceBelief(factor=1.0):
             trustBeliefs[self._humanName]['competence'] -= competenceUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def increaseConfidence(factor=1.0):
+            trustBeliefs[self._humanName]['confidence'] += confidenceUpdateSpeed * factor
+            clipWillingnessAndCompetenceBeliefs()
+
+        def decreaseConfidence(factor=1.0):
+            trustBeliefs[self._humanName]['confidence'] -= confidenceUpdateSpeed * factor
             clipWillingnessAndCompetenceBeliefs()
 
 
@@ -1009,8 +1019,8 @@ class BaselineAgent(ArtificialBrain):
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
         with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(['name','competence','willingness'])
-            csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness']])
+            csv_writer.writerow(['name','competence','willingness', 'confidence'])
+            csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness'],trustBeliefs[self._humanName]['confidence']])
 
         return trustBeliefs
 
