@@ -213,6 +213,18 @@ class BaselineAgent(ArtificialBrain):
             self._tosearch.append(self._door['room_name'])
             self._phase = Phase.FIND_NEXT_GOAL
 
+        def do_not_rescue():
+            # reset waiting time
+            self._waiting_time = 0
+            self._answered = True
+            self._waiting = False
+            self._todo.append(self._recentVic)
+            self._recentVic = None
+            self._phase = Phase.FIND_NEXT_GOAL
+
+        def robot_decides_alone():
+            # TODO: return boolean indicating if we let the robot decide on its own and thus not ask the human to make a decision
+
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:
@@ -441,8 +453,6 @@ class BaselineAgent(ArtificialBrain):
                 for info in state.values():
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'rock' in info['obj_id']:
                         objects.append(info)
-####################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
-
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:  
                             self._sendMessage('Found rock blocking ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
@@ -483,7 +493,6 @@ class BaselineAgent(ArtificialBrain):
                                     # go to new phase
                                     do_not_remove()
                         # Remain idle untill the human communicates what to do with the identified obstacle 
-######################### TODO: call trustbelief to influence decision (dont wait forever?)          
                         else:
                             # increase waiting time
                             self._waiting_time += 1
@@ -496,18 +505,27 @@ class BaselineAgent(ArtificialBrain):
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info['obj_id']:
                         objects.append(info)
                         # Communicate which obstacle is blocking the entrance
-####################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
                         if self._answered == False and not self._remove and not self._waiting:
-                            self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
-                                Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + ' \
-                                \n clock - removal time: 10 seconds','RescueBot')
-                            self._waiting = True
+                            if competenceIsLow() or (competenceIsMedium() and willingnessIsLow()):
+                                # remove tree alone and dont ask human for opinion
+                                self._answered = True
+                                self._waiting = False
+                                self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.','RescueBot')
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}                               
+                            else:
+                                self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
+                                    Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + ' \
+                                    \n clock - removal time: 10 seconds','RescueBot')
+                                self._waiting = True
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
                             # go to new phase
                             do_not_remove()
                         # Remove the obstacle if the human tells the agent to do so
                         if self.received_messages_content and self.received_messages_content[-1] == 'Remove' or self._remove:
+                            self._waiting_time = 0
                             if not self._remove:
                                 self._answered = True
                                 self._waiting = False
@@ -518,32 +536,56 @@ class BaselineAgent(ArtificialBrain):
                             self._remove = False
                             return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Remain idle untill the human communicates what to do with the identified obstacle
-######################### TODO: call trustbelief to influence decision (dont wait forever?)          
                         else:
                             # increase waiting time
                             self._waiting_time += 1
                             if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
                                 return None, {} 
                             else:
-                                # go to new phase
-                                do_not_remove()
+                                # waited too long! We remove alone!
+                                self._waiting_time = 0
+                                self._answered = True
+                                self._waiting = False
+                                self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + ' because you did not respond.','RescueBot')
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}    
 
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in info['obj_id']:
                         objects.append(info)
-####################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
-
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:
-                            self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove together", "Remove alone", or "Continue" searching. \n \n \
-                                Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + ' \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \
-                                \n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds','RescueBot')
-                            self._waiting = True
+                            
+                            if willingnessIsLow() and (competenceIsLow() or competenceIsMedium()):
+                                # remove alone
+                                self._answered = True
+                                self._waiting = False
+                                self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']} 
+                            if willingnessIsLow() and competenceIsHigh():
+                                # remove alone or continue?
+                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove alone", or "Continue" searching. \n \n \
+                                    Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + ' \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \
+                                    \n clock - removal time together: 3 seconds \n clock - removal time alone: 20 seconds','RescueBot')
+                                self._waiting = True
+                            if competenceIsLow() and (willingnessIsMedium() or willingnessIsHigh()):
+                                # remove together?
+                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide to "Remove together".','RescueBot')
+                                self._waiting = True
+                            else:
+                                # remove together, alone or continue?
+                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove together", "Remove alone", or "Continue" searching. \n \n \
+                                    Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + ' \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \
+                                    \n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds','RescueBot')
+                                self._waiting = True
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle          
-                        if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
+                        if (not (competenceIsLow() and (willingnessIsMedium() or willingnessIsHigh()))) and self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
                             # go to new phase
                             do_not_remove()
                         # Remove the obstacle alone if the human decides so
-                        if self.received_messages_content and self.received_messages_content[-1] == 'Remove alone' and not self._remove:
+                        if (not (competenceIsLow() and (willingnessIsMedium() or willingnessIsHigh()))) and self.received_messages_content and self.received_messages_content[-1] == 'Remove alone' and not self._remove:
                             self._answered = True
                             self._waiting = False
                             self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -551,7 +593,7 @@ class BaselineAgent(ArtificialBrain):
                             self._remove = False
                             return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Remove the obstacle together if the human decides so
-                        if self.received_messages_content and self.received_messages_content[-1] == 'Remove together' or self._remove:
+                        if (not (willingnessIsLow() and competenceIsHigh())) and self.received_messages_content and self.received_messages_content[-1] == 'Remove together' or self._remove:
                             if not self._remove:
                                 self._answered = True
                             # Tell the human to come over and be idle untill human arrives
@@ -575,15 +617,20 @@ class BaselineAgent(ArtificialBrain):
                                     # go to new phase
                                     do_not_remove()
                         # Remain idle until the human communicates what to do with the identified obstacle
-######################### TODO: call trustbelief to influence decision (dont wait forever?)          
                         else:
                             # increase waiting time
                             self._waiting_time += 1
                             if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
                                 return None, {}
                             else:
-                                # go to new phase
-                                do_not_remove()
+                                # we have waited too long, remove alone!
+                                self._waiting_time = 0
+                                self._answered = True
+                                self._waiting = False
+                                self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + ' because you did not respond.','RescueBot')
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']} 
 
                 # If no obstacles are blocking the entrance, enter the area
                 if len(objects) == 0:
@@ -667,12 +714,15 @@ class BaselineAgent(ArtificialBrain):
                                 self._foundVictimLocs[vic] = {'location': info['location'],'room': self._door['room_name'], 'obj_id': info['obj_id']}
                                 # Communicate which victim the agent found and ask the human whether to rescue the victim now or at a later stage
 ############################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
-
+                                
                                 if 'mild' in vic and self._answered == False and not self._waiting:
-                                    self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
-                                        Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + '\n \
-                                        clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,'RescueBot')
-                                    self._waiting = True
+                                    if robot_decides_alone():
+                                        # TODO: we moeten hier kiezen: continue of rescue alone? En waar baseren we deze keuze op?
+                                    else:
+                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
+                                            Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + '\n \
+                                            clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,'RescueBot')
+                                        self._waiting = True
                                         
                                 if 'critical' in vic and self._answered == False and not self._waiting:
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue" or "Continue" searching. \n\n \
@@ -737,11 +787,7 @@ class BaselineAgent(ArtificialBrain):
                     self._phase = Phase.FIND_NEXT_GOAL
                 # Continue searching other areas if the human decides so
                 if self.received_messages_content and self.received_messages_content[-1] == 'Continue':
-                    self._answered = True
-                    self._waiting = False
-                    self._todo.append(self._recentVic)
-                    self._recentVic = None
-                    self._phase = Phase.FIND_NEXT_GOAL
+                    do_not_rescue()
                 # Remain idle untill the human communicates to the agent what to do with the found victim
 ############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
