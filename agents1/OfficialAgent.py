@@ -716,15 +716,34 @@ class BaselineAgent(ArtificialBrain):
 ############################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
                                 
                                 if 'mild' in vic and self._answered == False and not self._waiting:
-                                    if robot_decides_alone():
-                                        # TODO: we moeten hier kiezen: continue of rescue alone? En waar baseren we deze keuze op?
-                                    else:
+                                    self._waiting_time = 0
+                                    if willingnessIsLow() and (competenceIsLow() or competenceIsMedium()):
+                                        # rescue alone
+                                        self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                                        self._rescue = 'alone'
+                                        self._answered = True
+                                        self._waiting = False
+                                        self._recentVic = None
+                                        self._phase = Phase.FIND_NEXT_GOAL
+                                    if willingnessIsLow() and competenceIsHigh():
+                                        # ask rescue alone or continue
+                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue alone", or "Continue" searching. \n \n \
+                                            Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + '\n \
+                                            clock - extra time when rescuing alone: 15 seconds ' + self._distanceHuman,'RescueBot')
+                                        self._waiting = True
+                                    if competenceIsHigh() and (willingnessIsMedium() or willingnessIsHigh()):
+                                        # ask rescue alone, together or continue
                                         self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
                                             Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + '\n \
                                             clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,'RescueBot')
                                         self._waiting = True
+                                    else:
+                                        # ask rescue together
+                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide to "Rescue together".','RescueBot')
+                                        self._waiting = True
                                         
                                 if 'critical' in vic and self._answered == False and not self._waiting:
+                                    
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue" or "Continue" searching. \n\n \
                                         Important features to consider are: \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \n safe - victims rescued: ' + str(self._collectedVictims) + '\n \
                                         afstand - distance between us: ' + self._distanceHuman,'RescueBot')
@@ -749,6 +768,7 @@ class BaselineAgent(ArtificialBrain):
                 # Make a plan to rescue a found critically injured victim if the human decides so
 ################# TODO: what if the human lied here??
                 if self.received_messages_content and self.received_messages_content[-1] == 'Rescue' and 'critical' in self._recentVic:
+                    self._waiting_time = 0
                     self._rescue = 'together'
                     self._answered = True
                     self._waiting = False
@@ -764,7 +784,8 @@ class BaselineAgent(ArtificialBrain):
                 # Make a plan to rescue a found mildly injured victim together if the human decides so
 ############### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
 
-                if self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
+                if (not willingnessIsLow()) and self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
+                    self._waiting_time = 0
                     self._rescue = 'together'
                     self._answered = True
                     self._waiting = False
@@ -778,20 +799,37 @@ class BaselineAgent(ArtificialBrain):
                     self._recentVic = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
                 # Make a plan to rescue the mildly injured victim alone if the human decides so, and communicate this to the human
-                if self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic:
+                if (willingnessIsLow() or competenceIsHigh()) and self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic:
                     self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                    self._waiting_time = 0
                     self._rescue = 'alone'
                     self._answered = True
                     self._waiting = False
                     self._recentVic = None
                     self._phase = Phase.FIND_NEXT_GOAL
                 # Continue searching other areas if the human decides so
-                if self.received_messages_content and self.received_messages_content[-1] == 'Continue':
+                if competenceIsHigh() and self.received_messages_content and self.received_messages_content[-1] == 'Continue':
                     do_not_rescue()
                 # Remain idle untill the human communicates to the agent what to do with the found victim
 ############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
-                    return None, {}
+                    # increase waiting time
+                    self._waiting_time += 1
+                    if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                        return None, {} 
+                    else:
+                        if 'mild' in self._recentVic:
+                            # waited too long, now we rescue alone!
+                            self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                            self._waiting_time = 0
+                            self._rescue = 'alone'
+                            self._answered = True
+                            self._waiting = False
+                            self._recentVic = None
+                            self._phase = Phase.FIND_NEXT_GOAL
+                        else:
+                            # continue
+                            do_not_rescue()
                 # Find the next area to search when the agent is not waiting for an answer from the human or occupied with rescuing a victim
                 if not self._waiting and not self._rescue:
                     self._recentVic = None
