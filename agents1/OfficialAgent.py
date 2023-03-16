@@ -1094,6 +1094,11 @@ class BaselineAgent(ArtificialBrain):
                 if 'Rescue alone' in message:
                     decreaseWillingnessBelief(0.25)
 
+                    if self._receivedMessageStates[i].distanceHumanRobot == 'close':
+                        decreaseCompetenceBelief()
+                    elif self._receivedMessageStates[i].distanceHumanRobot == 'far':
+                        increaseCompetenceBelief()
+
                 if 'Rescue together' in message:
                     increaseWillingnessBelief(0.25)
 
