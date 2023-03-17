@@ -1048,6 +1048,13 @@ class BaselineAgent(ArtificialBrain):
             clipWillingnessAndCompetenceBeliefs()
 
 
+        def getLastMessageSentByRobot():
+            if len(self._receivedMessageStates[i].messagesSentByRobot) > 0:
+                return self._receivedMessageStates[i].messagesSentByRobot[-1]
+            
+            return None
+
+
         # Function: find closest previous message that is not 'Continue'
         def findPreviousMessageSkipContinue(msgs, index):
 
@@ -1068,9 +1075,6 @@ class BaselineAgent(ArtificialBrain):
             # TRUST MECHANISM
             #
 
-            # For each received message, increase the confidence by 0.005
-            increaseConfidence(0.005)
-
             # This is an example that was already given in the code
             # # Increase agent trust in a team member that rescued a victim
             # if 'Collect' in message:
@@ -1084,6 +1088,47 @@ class BaselineAgent(ArtificialBrain):
 
 
             if self._eval_type is not None:
+
+                # If the last message that the robot has sent to the human says
+                # 'Found ~vic because you told me ~vic was located here.',
+                # increase the competence belief
+                if  getLastMessageSentByRobot() \
+                    and 'Found ' in getLastMessageSentByRobot() \
+                    and ' because you told me ' in getLastMessageSentByRobot() \
+                    and ' was located here.' in getLastMessageSentByRobot():
+                    increaseCompetenceBelief()
+                    increaseConficence(0.1)
+
+                # If the last message that the robot has sent to the human says
+                # '~Vic not present in ~room because I searched the whole area without finding ~vic.'
+                # Then decrease the competence by a significant amount
+                if  getLastMessageSentByRobot() \
+                    and ' not present in ' in getLastMessageSentByRobot() \
+                    and ' because I searched the whole area without finding ' in getLastMessageSentByRobot():
+                    decreaseCompetenceBelief(4)
+                    increaseConfidence(0.1)
+
+                # If the last message from the robot says
+                # 'Going to re-search all areas.'
+                # decrease the competence and willingness
+                if  getLastMessageSentByRobot() \
+                    and 'Going to re-search all areas.' in getLastMessageSentByRobot():
+                    decreaseCompetenceBelief(2)
+                    decreaseWillingnessBelief(2)
+                    increaseConfidence(0.05)
+
+                # If the last message from the robot says
+                # 'Removing tree blocking ' + str(self._door['room_name']) + ' because you asked me to.'
+                # increase the willingness belief towards the human
+                if getLastMessageSentByRobot() \
+                    and 'Removing tree blocking ' in getLastMessageSentByRobot() \
+                    and ' because you asked me to.' in getLastMessageSentByRobot():
+                    increaseWillingnessBelief()
+
+                
+
+                # For each received message, increase the confidence by 0.005
+                increaseConfidence(0.005)
 
                 # If there's less than 10 seconds between this message and the previous one:
                 #   give a willingness increase
