@@ -132,10 +132,10 @@ class BaselineAgent(ArtificialBrain):
 
         # Functions that can be used to retrieve the current trust-beliefs
         def getCurrentWillingnessBelief():
-            return trustBeliefs[self._humanName]['willingness']
+            return trustBeliefs[self._humanName]['willingness'] * getCurrentConfidence()
     
         def getCurrentCompetenceBelief():
-            return trustBeliefs[self._humanName]['competence']
+            return trustBeliefs[self._humanName]['competence'] * getCurrentConfidence()
         
         def getCurrentConfidence():
             return trustBeliefs[self._humanName]['confidence']
@@ -1016,7 +1016,6 @@ class BaselineAgent(ArtificialBrain):
         # Define functions increase/decreaseWillingnessBelief and increase/decreaseCompetenceBelief
         willingnessUpdateSpeed = 0.03
         competenceUpdateSpeed = 0.05
-        confidenceUpdateSpeed = 0.05
 
         def clipWillingnessAndCompetenceBeliefs():
             # Make sure the trustBeliefs remain between -1 and +1
@@ -1040,12 +1039,12 @@ class BaselineAgent(ArtificialBrain):
             trustBeliefs[self._humanName]['competence'] -= competenceUpdateSpeed * factor
             clipWillingnessAndCompetenceBeliefs()
 
-        def increaseConfidence(factor=1.0):
-            trustBeliefs[self._humanName]['confidence'] += confidenceUpdateSpeed * factor
+        def increaseConfidence(by:0.0):
+            trustBeliefs[self._humanName]['confidence'] += by
             clipWillingnessAndCompetenceBeliefs()
 
-        def decreaseConfidence(factor=1.0):
-            trustBeliefs[self._humanName]['confidence'] -= confidenceUpdateSpeed * factor
+        def decreaseConfidence(by=0.0):
+            trustBeliefs[self._humanName]['confidence'] -= by
             clipWillingnessAndCompetenceBeliefs()
 
 
@@ -1068,6 +1067,9 @@ class BaselineAgent(ArtificialBrain):
             #
             # TRUST MECHANISM
             #
+
+            # For each received message, increase the confidence by 0.005
+            increaseConfidence(0.005)
 
             # This is an example that was already given in the code
             # # Increase agent trust in a team member that rescued a victim
@@ -1115,6 +1117,10 @@ class BaselineAgent(ArtificialBrain):
                     if prevMessage and 'Search' in prevMessage and not message == prevMessage:
                         decreaseWillingnessBelief(0.5)
 
+                        # Decrease the confidence slightly, because we can't be sure whether the player is lying or
+                        # simply found an empty room
+                        decreaseConfidence(0.01)
+
 
                     # If the previous message says 'Found', meaning that the human found a victim
                     # but was not motivated to 'Collect' that victim, the willingness belief drops
@@ -1133,7 +1139,11 @@ class BaselineAgent(ArtificialBrain):
                     # If the human messages 'Found' directly after a 'Found':
                     # it was decided not to alter the competence- or willingness-beliefs here.
                     if prevMessage and 'Found' in prevMessage:
-                        pass
+                        # Decrease competence, because two 'Found' in a row is considered the same action
+                        decreaseCompetenceBelief()
+
+                        # Decrease confidence, because we can't be fully sure what the human was thinking here...
+                        decreaseConfidence(0.01)
 
 
 
