@@ -92,7 +92,7 @@ class BaselineAgent(ArtificialBrain):
         # keep track of the time the robot waits for a response
         self._waiting_time = 0
 
-        self._timer_rec = 0
+        self._timer_rec = -1
     
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -146,72 +146,60 @@ class BaselineAgent(ArtificialBrain):
 
         # WILLINGNESS
         def willingnessLowerThan(threshold: float) -> bool:
-            print(getCurrentWillingnessBelief())
-            getCurrentWillingnessBelief() < threshold
+            return getCurrentWillingnessBelief() < threshold
 
         def willingnessHigherThan(threshold: float) -> bool:
-            print(getCurrentWillingnessBelief())
-            getCurrentWillingnessBelief() > threshold
+            return getCurrentWillingnessBelief() > threshold
 
         def willingnessApproximately(value: float, margin: float) -> bool:
-            print(getCurrentWillingnessBelief())
-            abs(getCurrentWillingnessBelief() - value) <= margin
+            return abs(getCurrentWillingnessBelief() - value) <= margin
 
         def willingnessIsLow() -> bool:
-            print(getCurrentWillingnessBelief())
-            getCurrentWillingnessBelief() < -0.5
+            return getCurrentWillingnessBelief() < -0.5
 
         def willingnessIsMedium() -> bool:
-            print(getCurrentWillingnessBelief())
-            getCurrentWillingnessBelief() >= -0.5 and getCurrentWillingnessBelief() <= 0.5
+            return getCurrentWillingnessBelief() >= -0.5 and getCurrentWillingnessBelief() <= 0.5
 
         def willingnessIsHigh() -> bool:
-            print(getCurrentWillingnessBelief())
-            getCurrentWillingnessBelief() > 0.5
+            return getCurrentWillingnessBelief() > 0.5
 
         # COMPETENCE
         def competenceLowerThan(threshold: float) -> bool:
-            print(getCurrentCompetenceBelief())
-            getCurrentCompetenceBelief() < threshold
+            return getCurrentCompetenceBelief() < threshold
         
         def competenceHigherThan(threshold: float) -> bool:
-            print(getCurrentCompetenceBelief())
-            getCurrentCompetenceBelief() > threshold
+            return getCurrentCompetenceBelief() > threshold
         
         def competenceApproximately(value: float, margin: float) -> bool:
-            print(getCurrentCompetenceBelief())
-            abs(getCurrentCompetenceBelief() - value) <= margin
+            return abs(getCurrentCompetenceBelief() - value) <= margin
         
         def competenceIsLow() -> bool:
-            print(getCurrentCompetenceBelief())
-            getCurrentCompetenceBelief() < -0.5
+            return getCurrentCompetenceBelief() < -0.5
         
         def competenceIsMedium() -> bool:
-            print(getCurrentCompetenceBelief())
-            getCurrentCompetenceBelief() >= -0.5 and getCurrentCompetenceBelief() <= 0.5
+            return getCurrentCompetenceBelief() >= -0.5 and getCurrentCompetenceBelief() <= 0.5
         
         def competenceIsHigh() -> bool:
-            print(getCurrentCompetenceBelief())
-            getCurrentCompetenceBelief() > 0.5
+            return getCurrentCompetenceBelief() > 0.5
 
         # CONFIDENCE
         def confidenceLowerThan(threshold: float) -> bool:
-            getCurrentConfidence() < threshold
+            return getCurrentConfidence() < threshold
         
         def confidenceHigherThan(threshold: float) -> bool:
-            getCurrentConfidence() > threshold
+            return getCurrentConfidence() > threshold
         
         def confidenceApproximately(value: float, margin: float) -> bool:
-            abs(getCurrentConfidence() - value) <= margin
+            return abs(getCurrentConfidence() - value) <= margin
         
         def confidenceIsLow() -> bool:
-            getCurrentConfidence() < 0.25
+            return getCurrentConfidence() < 0.25
         
         def confidenceIsMedium() -> bool:
-            getCurrentConfidence() >= 0.25 and getCurrentConfidence() <= 0.75
+            return getCurrentConfidence() >= 0.25 and getCurrentConfidence() <= 0.75
         
         def confidenceIsHigh() -> bool:
-            getCurrentConfidence() > 0.75
+            return getCurrentConfidence() > 0.75
 
         def start_timer():
             if self._timer_rec < 0:
@@ -225,7 +213,13 @@ class BaselineAgent(ArtificialBrain):
 
         def stay_idle():
             wait_time = time.time() - get_timer()
-            return (willingnessIsLow() and wait_time <= 10) or (willingnessIsMedium() and wait_time <= 15) or (willingnessIsHigh() and wait_time <= 20)
+            print("Willingness: " + str(willingnessIsLow()) + ", " + str(willingnessIsMedium()) + ", " + str(willingnessIsHigh()))
+            result = (willingnessIsLow() and wait_time <= 30) or (willingnessIsMedium() and wait_time <= 40) or (willingnessIsHigh() and wait_time <= 50)
+
+            if not result:
+                stop_timer()
+
+            return result
 
         def do_not_remove():
             # reset waiting time
@@ -883,6 +877,7 @@ class BaselineAgent(ArtificialBrain):
                         if 'mild' in self._recentVic:
                             # waited too long, now we rescue alone!
                             print("we waited too long for a response, so I remove the mild victim alone")
+                            stop_timer()
                             self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
                             self._rescue = 'alone'
                             self._answered = True
@@ -891,6 +886,7 @@ class BaselineAgent(ArtificialBrain):
                             self._phase = Phase.FIND_NEXT_GOAL
                         else:
                             print("we waited too long for a response, but as a critical victim cant be rescued alone, I continue")
+                            stop_timer()
                             # continue
                             do_not_rescue()
                 # Find the next area to search when the agent is not waiting for an answer from the human or occupied with rescuing a victim
