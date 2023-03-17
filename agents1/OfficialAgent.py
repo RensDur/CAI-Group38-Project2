@@ -550,7 +550,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._waiting_time = 0
                                 self._answered = True
                                 self._waiting = False
-                                self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + ' because you did not respond.','RescueBot')
+                                self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.','RescueBot')
                                 self._phase = Phase.ENTER_ROOM
                                 self._remove = False
                                 return RemoveObject.__name__, {'object_id': info['obj_id']}    
@@ -572,14 +572,16 @@ class BaselineAgent(ArtificialBrain):
                             if willingnessIsLow() and competenceIsHigh():
                                 print("found stone: ask remove alone or continue? Note that human here is not able to answer with 'remove together'")
                                 # remove alone or continue?
-                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove alone", or "Continue" searching. \n \n \
-                                    Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + ' \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \
-                                    \n clock - removal time together: 3 seconds \n clock - removal time alone: 20 seconds','RescueBot')
+                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove together", "Remove alone", or "Continue" searching. \n \n \
+                                Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + ' \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \
+                                \n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds','RescueBot')
                                 self._waiting = True
                             if competenceIsLow() and (willingnessIsMedium() or willingnessIsHigh()):
                                 # remove together?
                                 print("found stone: ask human to remove together. Note that human cant answer with 'remove alone' or 'continue'")
-                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide to "Remove together".','RescueBot')
+                                self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove together", "Remove alone", or "Continue" searching. \n \n \
+                                Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + ' \n explore - areas searched: area ' + str(self._searchedRooms).replace('area','') + ' \
+                                \n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds','RescueBot')
                                 self._waiting = True
                             else:
                                 # remove together, alone or continue?
@@ -619,7 +621,7 @@ class BaselineAgent(ArtificialBrain):
                                     self._waiting_time = 0
                                     self._answered = True
                                     self._waiting = False
-                                    self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + ' because you did not respond.','RescueBot')
+                                    self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
                                     self._phase = Phase.ENTER_ROOM
                                     self._remove = False
                                     return RemoveObject.__name__, {'object_id': info['obj_id']} 
@@ -637,7 +639,7 @@ class BaselineAgent(ArtificialBrain):
                                     self._waiting_time = 0
                                     self._answered = True
                                     self._waiting = False
-                                    self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + ' because you did not respond.','RescueBot')
+                                    self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
                                     self._phase = Phase.ENTER_ROOM
                                     self._remove = False
                                     return RemoveObject.__name__, {'object_id': info['obj_id']} 
@@ -653,7 +655,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._waiting_time = 0
                                 self._answered = True
                                 self._waiting = False
-                                self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + ' because you did not respond.','RescueBot')
+                                self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
                                 self._phase = Phase.ENTER_ROOM
                                 self._remove = False
                                 return RemoveObject.__name__, {'object_id': info['obj_id']} 
@@ -755,9 +757,9 @@ class BaselineAgent(ArtificialBrain):
                                     if willingnessIsLow() and competenceIsHigh():
                                         print("found mild victim: ask rescue alone or continue? Note that human here is not able to answer with 'rescue together'")
                                         # ask rescue alone or continue
-                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue alone", or "Continue" searching. \n \n \
+                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
                                             Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + '\n \
-                                            clock - extra time when rescuing alone: 15 seconds ' + self._distanceHuman,'RescueBot')
+                                            clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,'RescueBot')
                                         self._waiting = True
                                     if competenceIsHigh() and (willingnessIsMedium() or willingnessIsHigh()):
                                         # ask rescue alone, together or continue
@@ -769,7 +771,9 @@ class BaselineAgent(ArtificialBrain):
                                     else:
                                         # ask rescue together
                                         print("found mild victim: ask human to rescue together but dont give human other options")
-                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide to "Rescue together".','RescueBot')
+                                        self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
+                                            Important features to consider are: \n safe - victims rescued: ' + str(self._collectedVictims) + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ','') + '\n \
+                                            clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,'RescueBot')
                                         self._waiting = True
                                         
                                 if 'critical' in vic and self._answered == False and not self._waiting:
@@ -857,7 +861,7 @@ class BaselineAgent(ArtificialBrain):
                         if 'mild' in self._recentVic:
                             # waited too long, now we rescue alone!
                             print("we waited too long for a response, so I remove the mild victim alone")
-                            self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + ' because you did not respond.','RescueBot')
+                            self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
                             self._waiting_time = 0
                             self._rescue = 'alone'
                             self._answered = True
