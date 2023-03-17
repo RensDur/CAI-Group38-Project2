@@ -90,7 +90,9 @@ class BaselineAgent(ArtificialBrain):
         self._receivedMessageStates = []
 
         # keep track of the time the robot waits for a response
-        self._waiting_time = 0
+        start_timer()
+
+        self._timer_rec = 0
     
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -144,40 +146,52 @@ class BaselineAgent(ArtificialBrain):
 
         # WILLINGNESS
         def willingnessLowerThan(threshold: float) -> bool:
+            print(getCurrentWillingnessBelief())
             getCurrentWillingnessBelief() < threshold
 
         def willingnessHigherThan(threshold: float) -> bool:
+            print(getCurrentWillingnessBelief())
             getCurrentWillingnessBelief() > threshold
 
         def willingnessApproximately(value: float, margin: float) -> bool:
+            print(getCurrentWillingnessBelief())
             abs(getCurrentWillingnessBelief() - value) <= margin
 
         def willingnessIsLow() -> bool:
+            print(getCurrentWillingnessBelief())
             getCurrentWillingnessBelief() < -0.5
 
         def willingnessIsMedium() -> bool:
+            print(getCurrentWillingnessBelief())
             getCurrentWillingnessBelief() >= -0.5 and getCurrentWillingnessBelief() <= 0.5
 
         def willingnessIsHigh() -> bool:
+            print(getCurrentWillingnessBelief())
             getCurrentWillingnessBelief() > 0.5
 
         # COMPETENCE
         def competenceLowerThan(threshold: float) -> bool:
+            print(getCurrentCompetenceBelief())
             getCurrentCompetenceBelief() < threshold
         
         def competenceHigherThan(threshold: float) -> bool:
+            print(getCurrentCompetenceBelief())
             getCurrentCompetenceBelief() > threshold
         
         def competenceApproximately(value: float, margin: float) -> bool:
+            print(getCurrentCompetenceBelief())
             abs(getCurrentCompetenceBelief() - value) <= margin
         
         def competenceIsLow() -> bool:
+            print(getCurrentCompetenceBelief())
             getCurrentCompetenceBelief() < -0.5
         
         def competenceIsMedium() -> bool:
+            print(getCurrentCompetenceBelief())
             getCurrentCompetenceBelief() >= -0.5 and getCurrentCompetenceBelief() <= 0.5
         
         def competenceIsHigh() -> bool:
+            print(getCurrentCompetenceBelief())
             getCurrentCompetenceBelief() > 0.5
 
         # CONFIDENCE
@@ -199,12 +213,22 @@ class BaselineAgent(ArtificialBrain):
         def confidenceIsHigh() -> bool:
             getCurrentConfidence() > 0.75
 
-        def stay_idle(time):
-            return (willingnessIsLow() and time < 20) or (willingnessIsMedium() and time < 60) or (willingnessIsHigh() and time < 180)
+        def start_timer():
+            if self._timer_rec < 0:
+                self._timer_rec = time.time()
+        
+        def get_timer():
+            return self._timer_rec
+
+        def stop_timer():
+            self._timer_rec = -1
+
+        def stay_idle():
+            wait_time = time.time() - get_timer()
+            return (willingnessIsLow() and wait_time <= 10) or (willingnessIsMedium() and wait_time <= 15) or (willingnessIsHigh() and wait_time <= 20)
 
         def do_not_remove():
             # reset waiting time
-            self._waiting_time = 0
             self._answered = True
             self._waiting = False
             # Add area to the to do list
@@ -213,7 +237,6 @@ class BaselineAgent(ArtificialBrain):
 
         def do_not_rescue():
             # reset waiting time
-            self._waiting_time = 0
             self._answered = True
             self._waiting = False
             self._todo.append(self._recentVic)
@@ -463,43 +486,46 @@ class BaselineAgent(ArtificialBrain):
                         # Wait for the human to help removing the obstacle and remove the obstacle together
                         if self.received_messages_content and self.received_messages_content[-1] == 'Remove' or self._remove:
                             # reset waiting time
-                            self._waiting_time = 0
                             if not self._remove:
                                 self._answered = True
                             # Tell the human to come over and be idle untill human arrives
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
                                 # increase waiting time
-                                self._waiting_time += 1
-                                if stay_idle(self._waiting_time):
+
+                                start_timer()
+                                if stay_idle():
                                     return None, {}
                                 else:
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                     # go to new phase
                                     do_not_remove()
+                                    stop_timer()
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
                                 # reset waiting time
-                                self._waiting_time = 0
+                                start_timer()
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
-                                if stay_idle(self._waiting_time):
+                                if stay_idle():
                                     return None, {}
                                 else:
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                     # go to new phase
                                     do_not_remove()
+                                    stop_timer()
                         # Remain idle untill the human communicates what to do with the identified obstacle 
                         else:
                             # increase waiting time
-                            self._waiting_time += 1
-                            if stay_idle(self._waiting_time):
+                            start_timer()
+                            if stay_idle():
                                 return None, {} 
                             else:
                                 print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                 # go to new phase
                                 do_not_remove()
+                                stop_timer()
 
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info['obj_id']:
                         objects.append(info)
@@ -528,7 +554,6 @@ class BaselineAgent(ArtificialBrain):
                         # Remove the obstacle if the human tells the agent to do so
                         if self.received_messages_content and self.received_messages_content[-1] == 'Remove' or self._remove:
                             print("human responds with remove so I remove tree")
-                            self._waiting_time = 0
                             if not self._remove:
                                 self._answered = True
                                 self._waiting = False
@@ -541,13 +566,13 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle untill the human communicates what to do with the identified obstacle
                         else:
                             # increase waiting time
-                            self._waiting_time += 1
-                            if stay_idle(self._waiting_time):
+                            start_timer()
+                            if stay_idle():
                                 return None, {} 
                             else:
                                 print("we have waited too long at the human, so we remove tree alone")
                                 # waited too long! We remove alone!
-                                self._waiting_time = 0
+                                stop_timer()
                                 self._answered = True
                                 self._waiting = False
                                 self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -612,13 +637,13 @@ class BaselineAgent(ArtificialBrain):
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove stones together.','RescueBot')
                                 # increase waiting time
-                                self._waiting_time += 1
-                                if stay_idle(self._waiting_time):
+                                start_timer()
+                                if stay_idle():
                                     return None, {}
                                 else:
                                     print("human responded with 'remove together', but did not come her in time, so we remove alone")
                                     # we have waited too long, remove alone!
-                                    self._waiting_time = 0
+                                    stop_timer()
                                     self._answered = True
                                     self._waiting = False
                                     self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -630,13 +655,13 @@ class BaselineAgent(ArtificialBrain):
                             if state[{'is_human_agent': True}]:
                                 self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
-                                self._waiting_time += 1
-                                if stay_idle(self._waiting_time):
+                                start_timer()
+                                if stay_idle():
                                     return None, {}
                                 else:
                                     print("human responded with 'remove together' and has arrived here, but now doesnt respond in time, so we remove alone")
                                     # we have waited too long, remove alone!
-                                    self._waiting_time = 0
+                                    stop_timer()
                                     self._answered = True
                                     self._waiting = False
                                     self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -646,13 +671,13 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle until the human communicates what to do with the identified obstacle
                         else:
                             # increase waiting time
-                            self._waiting_time += 1
-                            if stay_idle(self._waiting_time):
+                            start_timer()
+                            if stay_idle():
                                 return None, {}
                             else:
                                 print("human has not responded in time to our question, so we remove stone alone")
                                 # we have waited too long, remove alone!
-                                self._waiting_time = 0
+                                stop_timer()
                                 self._answered = True
                                 self._waiting = False
                                 self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -744,7 +769,6 @@ class BaselineAgent(ArtificialBrain):
 ############################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
                                 
                                 if 'mild' in vic and self._answered == False and not self._waiting:
-                                    self._waiting_time = 0
                                     if willingnessIsLow() and (competenceIsLow() or competenceIsMedium()):
                                         print("found mild victim: rescue alone without asking human")
                                         # rescue alone
@@ -803,7 +827,6 @@ class BaselineAgent(ArtificialBrain):
 ################# TODO: what if the human lied here??
                 if self.received_messages_content and self.received_messages_content[-1] == 'Rescue' and 'critical' in self._recentVic:
                     print("human decides to rescue critical victim")
-                    self._waiting_time = 0
                     self._rescue = 'together'
                     self._answered = True
                     self._waiting = False
@@ -821,7 +844,6 @@ class BaselineAgent(ArtificialBrain):
 
                 if (not willingnessIsLow()) and self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
                     print("human had the chance to respond with 'rescue together', and he did")
-                    self._waiting_time = 0
                     self._rescue = 'together'
                     self._answered = True
                     self._waiting = False
@@ -838,7 +860,6 @@ class BaselineAgent(ArtificialBrain):
                 if (willingnessIsLow() or competenceIsHigh()) and self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic:
                     print("human had the chance to respond with 'rescue alone', and he did, so I rescue alone")
                     self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
-                    self._waiting_time = 0
                     self._rescue = 'alone'
                     self._answered = True
                     self._waiting = False
@@ -854,15 +875,15 @@ class BaselineAgent(ArtificialBrain):
 ############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
                     # increase waiting time
-                    self._waiting_time += 1
-                    if stay_idle(self._waiting_time):
+                    start_timer()
+                    if stay_idle():
                         return None, {} 
                     else:
+                        stop_timer()
                         if 'mild' in self._recentVic:
                             # waited too long, now we rescue alone!
                             print("we waited too long for a response, so I remove the mild victim alone")
                             self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
-                            self._waiting_time = 0
                             self._rescue = 'alone'
                             self._answered = True
                             self._waiting = False

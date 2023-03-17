@@ -47,9 +47,11 @@ def output_logger(fld, eval_type=None):
     if eval_type is None:
         competence = trustfile_contents[-1]['competence']
         willingness = trustfile_contents[-1]['willingness']
+        confidence = trustfile_contents[-1]['confidence']
     else:
         competence = evaluation[eval_type] if eval_type != 'RANDOM-TRUST' else evaluation[eval_type]['competence']
         willingness = evaluation[eval_type] if eval_type != 'RANDOM-TRUST' else evaluation[eval_type]['willingness']
+        confidence = evaluation[eval_type] if eval_type != 'RANDOM-TRUST' else evaluation[eval_type]['confidence']
 
     # Retrieve the number of ticks to finish the task, score, and completeness
     no_ticks = action_contents[-1]['tick_nr']
@@ -63,4 +65,4 @@ def output_logger(fld, eval_type=None):
         csv_writer.writerow([completeness,score,no_ticks,len(unique_agent_actions),len(unique_human_actions)])
     with open(fld + '/beliefs/allTrustBeliefs.csv', mode='a+') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow([name,competence,willingness])
+        csv_writer.writerow([name,competence,willingness,confidence])
