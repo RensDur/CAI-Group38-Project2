@@ -200,7 +200,7 @@ class BaselineAgent(ArtificialBrain):
             getCurrentConfidence() > 0.75
 
         def stay_idle(time):
-            return (willingnessIsLow and time < 20) or (willingnessIsMedium and time < 60) or (willingnessIsHigh and time < 180)
+            return (willingnessIsLow() and time < 20) or (willingnessIsMedium() and time < 60) or (willingnessIsHigh() and time < 180)
 
         def do_not_remove():
             # reset waiting time
