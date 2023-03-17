@@ -99,8 +99,6 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
-        print("hoi")
-
         # Identify team members
         agent_name = state[self.agent_id]['obj_id']
         for member in state['World']['team_members']:
@@ -197,12 +195,15 @@ class BaselineAgent(ArtificialBrain):
             getCurrentConfidence() > 0.75
 
         def stay_idle(willingness, time):
-            if willingnessIsLow and time < 300:
+            if time < 3:
                 return True 
-            if willingnessIsMedium and time < 600:
-                return True 
-            if willingnessIsHigh and time < 6000:
-                return True 
+
+            # if willingnessIsLow and time < 300:
+            #     return True 
+            # if willingnessIsMedium and time < 600:
+            #     return True 
+            # if willingnessIsHigh and time < 6000:
+            #     return True 
             return False
 
         def do_not_remove():
@@ -817,7 +818,7 @@ class BaselineAgent(ArtificialBrain):
                     else:
                         if 'mild' in self._recentVic:
                             # waited too long, now we rescue alone!
-                            self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                            self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + ' because you did not respond.','RescueBot')
                             self._waiting_time = 0
                             self._rescue = 'alone'
                             self._answered = True
