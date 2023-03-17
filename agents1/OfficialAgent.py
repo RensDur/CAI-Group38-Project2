@@ -195,15 +195,12 @@ class BaselineAgent(ArtificialBrain):
             getCurrentConfidence() > 0.75
 
         def stay_idle(willingness, time):
-            if time < 3:
+            if willingnessIsLow and time < 20:
                 return True 
-
-            # if willingnessIsLow and time < 300:
-            #     return True 
-            # if willingnessIsMedium and time < 600:
-            #     return True 
-            # if willingnessIsHigh and time < 6000:
-            #     return True 
+            if willingnessIsMedium and time < 60:
+                return True 
+            if willingnessIsHigh and time < 180:
+                return True 
             return False
 
         def do_not_remove():
