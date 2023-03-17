@@ -471,7 +471,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
-                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                if stay_idle(self._waiting_time):
                                     return None, {}
                                 else:
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
@@ -484,7 +484,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
-                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                if stay_idle(self._waiting_time):
                                     return None, {}
                                 else:
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
@@ -494,7 +494,7 @@ class BaselineAgent(ArtificialBrain):
                         else:
                             # increase waiting time
                             self._waiting_time += 1
-                            if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                            if stay_idle(self._waiting_time):
                                 return None, {} 
                             else:
                                 print("we have waited too long at the human, so we continue as rock cannot be removed alone")
@@ -542,7 +542,7 @@ class BaselineAgent(ArtificialBrain):
                         else:
                             # increase waiting time
                             self._waiting_time += 1
-                            if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                            if stay_idle(self._waiting_time):
                                 return None, {} 
                             else:
                                 print("we have waited too long at the human, so we remove tree alone")
@@ -613,7 +613,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove stones together.','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
-                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                if stay_idle(self._waiting_time):
                                     return None, {}
                                 else:
                                     print("human responded with 'remove together', but did not come her in time, so we remove alone")
@@ -631,7 +631,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
-                                if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                                if stay_idle(self._waiting_time):
                                     return None, {}
                                 else:
                                     print("human responded with 'remove together' and has arrived here, but now doesnt respond in time, so we remove alone")
@@ -647,7 +647,7 @@ class BaselineAgent(ArtificialBrain):
                         else:
                             # increase waiting time
                             self._waiting_time += 1
-                            if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                            if stay_idle(self._waiting_time):
                                 return None, {}
                             else:
                                 print("human has not responded in time to our question, so we remove stone alone")
@@ -855,7 +855,7 @@ class BaselineAgent(ArtificialBrain):
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
                     # increase waiting time
                     self._waiting_time += 1
-                    if stay_idle(getCurrentWillingnessBelief(),self._waiting_time):
+                    if stay_idle(self._waiting_time):
                         return None, {} 
                     else:
                         if 'mild' in self._recentVic:
