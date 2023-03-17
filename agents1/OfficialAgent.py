@@ -132,10 +132,10 @@ class BaselineAgent(ArtificialBrain):
 
         # Functions that can be used to retrieve the current trust-beliefs
         def getCurrentWillingnessBelief():
-            return trustBeliefs[self._humanName]['willingness']
+            return trustBeliefs[self._humanName]['willingness'] * getCurrentConfidence()
     
         def getCurrentCompetenceBelief():
-            return trustBeliefs[self._humanName]['competence']
+            return trustBeliefs[self._humanName]['competence'] * getCurrentConfidence()
         
         def getCurrentConfidence():
             return trustBeliefs[self._humanName]['confidence']
@@ -993,7 +993,7 @@ class BaselineAgent(ArtificialBrain):
             # Evaluating, therefore no need to read csv file
             competence = default if self._eval_type != 'RANDOM-TRUST' else default['competence']
             willingness = default if self._eval_type != 'RANDOM-TRUST' else default['willingness']
-            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 1.0}
+            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 0.5}
 
         return trustBeliefs
 
@@ -1001,9 +1001,6 @@ class BaselineAgent(ArtificialBrain):
         '''
         Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
         '''
-
-        # Initialize the confidence to one
-        trustBeliefs[self._humanName]['confidence'] = 1.0
 
         # If a new message was added to the receivedMessages list, but has not yet been updated in the
         # self._receivedMessageStates container, add this message
@@ -1021,7 +1018,6 @@ class BaselineAgent(ArtificialBrain):
         # Define functions increase/decreaseWillingnessBelief and increase/decreaseCompetenceBelief
         willingnessUpdateSpeed = 0.03
         competenceUpdateSpeed = 0.05
-        confidenceUpdateSpeed = 0.05
 
         def clipWillingnessAndCompetenceBeliefs():
             # Make sure the trustBeliefs remain between -1 and +1
@@ -1045,13 +1041,20 @@ class BaselineAgent(ArtificialBrain):
             trustBeliefs[self._humanName]['competence'] -= competenceUpdateSpeed * factor
             clipWillingnessAndCompetenceBeliefs()
 
-        def increaseConfidence(factor=1.0):
-            trustBeliefs[self._humanName]['confidence'] += confidenceUpdateSpeed * factor
+        def increaseConfidence(by:0.0):
+            trustBeliefs[self._humanName]['confidence'] += by
             clipWillingnessAndCompetenceBeliefs()
 
-        def decreaseConfidence(factor=1.0):
-            trustBeliefs[self._humanName]['confidence'] -= confidenceUpdateSpeed * factor
+        def decreaseConfidence(by=0.0):
+            trustBeliefs[self._humanName]['confidence'] -= by
             clipWillingnessAndCompetenceBeliefs()
+
+
+        def getLastMessageSentByRobot():
+            if len(self._receivedMessageStates[i].messagesSentByRobot) > 0:
+                return self._receivedMessageStates[i].messagesSentByRobot[-1]
+            
+            return None
 
 
         # Function: find closest previous message that is not 'Continue'
@@ -1088,6 +1091,47 @@ class BaselineAgent(ArtificialBrain):
 
             if self._eval_type is not None:
 
+                # If the last message that the robot has sent to the human says
+                # 'Found ~vic because you told me ~vic was located here.',
+                # increase the competence belief
+                if  getLastMessageSentByRobot() \
+                    and 'Found ' in getLastMessageSentByRobot() \
+                    and ' because you told me ' in getLastMessageSentByRobot() \
+                    and ' was located here.' in getLastMessageSentByRobot():
+                    increaseCompetenceBelief()
+                    increaseConficence(0.1)
+
+                # If the last message that the robot has sent to the human says
+                # '~Vic not present in ~room because I searched the whole area without finding ~vic.'
+                # Then decrease the competence by a significant amount
+                if  getLastMessageSentByRobot() \
+                    and ' not present in ' in getLastMessageSentByRobot() \
+                    and ' because I searched the whole area without finding ' in getLastMessageSentByRobot():
+                    decreaseCompetenceBelief(4)
+                    increaseConfidence(0.1)
+
+                # If the last message from the robot says
+                # 'Going to re-search all areas.'
+                # decrease the competence and willingness
+                if  getLastMessageSentByRobot() \
+                    and 'Going to re-search all areas.' in getLastMessageSentByRobot():
+                    decreaseCompetenceBelief(2)
+                    decreaseWillingnessBelief(2)
+                    increaseConfidence(0.05)
+
+                # If the last message from the robot says
+                # 'Removing tree blocking ' + str(self._door['room_name']) + ' because you asked me to.'
+                # increase the willingness belief towards the human
+                if getLastMessageSentByRobot() \
+                    and 'Removing tree blocking ' in getLastMessageSentByRobot() \
+                    and ' because you asked me to.' in getLastMessageSentByRobot():
+                    increaseWillingnessBelief()
+
+                
+
+                # For each received message, increase the confidence by 0.005
+                increaseConfidence(0.005)
+
                 # If there's less than 10 seconds between this message and the previous one:
                 #   give a willingness increase
                 if prevMessage and self._receivedMessageStates[i].time - self._receivedMessageStates[i_p].time < 10*10:
@@ -1120,6 +1164,10 @@ class BaselineAgent(ArtificialBrain):
                     if prevMessage and 'Search' in prevMessage and not message == prevMessage:
                         decreaseWillingnessBelief(0.5)
 
+                        # Decrease the confidence slightly, because we can't be sure whether the player is lying or
+                        # simply found an empty room
+                        decreaseConfidence(0.01)
+
 
                     # If the previous message says 'Found', meaning that the human found a victim
                     # but was not motivated to 'Collect' that victim, the willingness belief drops
@@ -1138,7 +1186,11 @@ class BaselineAgent(ArtificialBrain):
                     # If the human messages 'Found' directly after a 'Found':
                     # it was decided not to alter the competence- or willingness-beliefs here.
                     if prevMessage and 'Found' in prevMessage:
-                        pass
+                        # Decrease competence, because two 'Found' in a row is considered the same action
+                        decreaseCompetenceBelief()
+
+                        # Decrease confidence, because we can't be fully sure what the human was thinking here...
+                        decreaseConfidence(0.01)
 
 
 

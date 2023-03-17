@@ -247,3 +247,37 @@ _Some interesting decisions are made, but I don't think we should take these int
 
 Willingness = eigen initiatief | beschikbaarbaarheid voor hulp | motivatie om de taak te voltooien
 Competence  = goed geheugen | snelste route kiezen | weak/normal/strong | 
+
+
+
+self._sendMessage('Our score is ' + str(state['rescuebot']['score']) + '.', 'RescueBot')
+If you are ready to begin our mission, you can simply start moving.', 'RescueBot')
+self._sendMessage('Moving to ' + self._foundVictimLocs[vic]['room'] + ' to pick up ' + self._goalVic +'. Please come there as well to help me carry ' + self._goalVic + ' to the drop zone.', 'RescueBot')
+self._sendMessage('Going to re-search all areas.', 'RescueBot')
+self._sendMessage('Moving to ' + str(self._door['room_name']) + ' to pick up ' + self._goalVic + ' together with you.', 'RescueBot')
+self._sendMessage('Moving to ' + str(self._door['room_name']) + ' to pick up ' + self._goalVic + '.', 'RescueBot')
+self._sendMessage('Moving to ' + str(self._door['room_name']) + ' because it is the closest unsearched area.', 'RescueBot')
+self._sendMessage('Reaching ' + str(self._door['room_name']) + ' will take a bit longer because I found stones blocking my path.', 'RescueBot')
+\n clock - removal time: 5 seconds \n afstand - distance between us: ' + self._distanceHuman ,'RescueBot')
+self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
+self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
+\n clock - removal time: 10 seconds','RescueBot')
+self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.','RescueBot')
+self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + ' because you asked me to.', 'RescueBot')
+\n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds','RescueBot')
+self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
+self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove stones together.','RescueBot')
+self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!','RescueBot')
+self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + ' because you told me ' + vic + ' was located here.','RescueBot')
+clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,'RescueBot')
+afstand - distance between us: ' + self._distanceHuman,'RescueBot')
+self._sendMessage(self._goalVic + ' not present in ' + str(self._door['room_name']) + ' because I searched the whole area without finding ' + self._goalVic + '.','RescueBot')
+self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to carry ' + str(self._recentVic) + ' together.', 'RescueBot')
+self._sendMessage('Lets carry ' + str(self._recentVic) + ' together! Please wait until I moved on top of ' + str(self._recentVic) + '.', 'RescueBot')
+self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to carry ' + str(self._recentVic) + ' together.', 'RescueBot')
+self._sendMessage('Lets carry ' + str(self._recentVic) + ' together! Please wait until I moved on top of ' + str(self._recentVic) + '.', 'RescueBot')
+self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+self._sendMessage('Transporting ' + self._goalVic + ' to the drop zone.', 'RescueBot')
+self._sendMessage('Delivered ' + self._goalVic + ' at the drop zone.', 'RescueBot')
+self._sendMessage('Moving to ' + str(self._door['room_name']) + ' to help you remove an obstacle.','RescueBot')
+self._sendMessage('Will come to ' + area + ' after dropping ' + self._goalVic + '.','RescueBot')
