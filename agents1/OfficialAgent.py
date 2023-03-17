@@ -213,7 +213,7 @@ class BaselineAgent(ArtificialBrain):
         def confidenceIsHigh() -> bool:
             getCurrentConfidence() > 0.75
 
-        def start_timer():
+        def start_custom_time():
             if self._timer_rec < 0:
                 self._timer_rec = time.time()
         
@@ -493,7 +493,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
                                 # increase waiting time
 
-                                start_timer()
+                                start_custom_time()
                                 if stay_idle():
                                     return None, {}
                                 else:
@@ -504,7 +504,7 @@ class BaselineAgent(ArtificialBrain):
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
                                 # reset waiting time
-                                start_timer()
+                                start_custom_time()
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
@@ -518,7 +518,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle untill the human communicates what to do with the identified obstacle 
                         else:
                             # increase waiting time
-                            start_timer()
+                            start_custom_time()
                             if stay_idle():
                                 return None, {} 
                             else:
@@ -566,7 +566,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle untill the human communicates what to do with the identified obstacle
                         else:
                             # increase waiting time
-                            start_timer()
+                            start_custom_time()
                             if stay_idle():
                                 return None, {} 
                             else:
@@ -637,7 +637,7 @@ class BaselineAgent(ArtificialBrain):
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove stones together.','RescueBot')
                                 # increase waiting time
-                                start_timer()
+                                start_custom_time()
                                 if stay_idle():
                                     return None, {}
                                 else:
@@ -655,7 +655,7 @@ class BaselineAgent(ArtificialBrain):
                             if state[{'is_human_agent': True}]:
                                 self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
-                                start_timer()
+                                start_custom_time()
                                 if stay_idle():
                                     return None, {}
                                 else:
@@ -671,7 +671,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle until the human communicates what to do with the identified obstacle
                         else:
                             # increase waiting time
-                            start_timer()
+                            start_custom_time()
                             if stay_idle():
                                 return None, {}
                             else:
@@ -875,7 +875,7 @@ class BaselineAgent(ArtificialBrain):
 ############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
                     # increase waiting time
-                    start_timer()
+                    start_custom_time()
                     if stay_idle():
                         return None, {} 
                     else:
