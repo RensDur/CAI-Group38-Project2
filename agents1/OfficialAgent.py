@@ -1239,7 +1239,7 @@ class BaselineAgent(ArtificialBrain):
                     and ' because you told me ' in getLastMessageSentByRobot() \
                     and ' was located here.' in getLastMessageSentByRobot():
                     increaseCompetenceBelief()
-                    increaseConficence(0.1)
+                    increaseConfidence(0.1)
 
                 # If the last message that the robot has sent to the human says
                 # '~Vic not present in ~room because I searched the whole area without finding ~vic.'
