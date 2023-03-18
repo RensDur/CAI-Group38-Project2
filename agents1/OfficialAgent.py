@@ -93,6 +93,7 @@ class BaselineAgent(ArtificialBrain):
         self._waiting_time = 0
 
         self._timer_rec = -1
+        self._timer_id = -1
     
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -201,19 +202,24 @@ class BaselineAgent(ArtificialBrain):
         def confidenceIsHigh() -> bool:
             return getCurrentConfidence() > 0.75
 
-        def start_timer():
-            if self._timer_rec < 0:
+        def start_timer(timer_id: int):
+            if self._timer_rec < 0 or timer_id != self._timer_id:
                 self._timer_rec = time.time()
+                self._timer_id = timer_id
+
+        def next_timer_id():
+            return self._timer_id + 1
 
         def stop_timer():
             self._timer_rec = -1
 
         def stay_idle():
             if self._timer_rec < 0:
-                start_timer()
+                start_timer(next_timer_id())
                 return True
 
             wait_time = time.time() - self._timer_rec
+            print("Waiting time: " + str(wait_time))
 
             result = True
 
@@ -226,6 +232,8 @@ class BaselineAgent(ArtificialBrain):
             
             if not result:
                 stop_timer()
+
+            print("Stay idle: " + str(result))
             
             return result
 
@@ -498,7 +506,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
                                 # increase waiting time
 
-                                start_timer()
+                                start_timer(next_timer_id())
                                 if stay_idle():
                                     return None, {}
                                     self._waitinig = True
@@ -512,7 +520,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
-                                start_timer()
+                                start_timer(next_timer_id())
                                 if stay_idle():
                                     return None, {}
                                     self._waitinig = True
@@ -523,7 +531,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle untill the human communicates what to do with the identified obstacle 
                         else:
                             # increase waiting time
-                            start_timer()
+                            start_timer(next_timer_id())
                             if stay_idle():
                                 return None, {}
                                 self._waitinig = True 
@@ -571,7 +579,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle untill the human communicates what to do with the identified obstacle
                         else:
                             # increase waiting time
-                            start_timer()
+                            start_timer(next_timer_id())
                             if stay_idle():
                                 return None, {}
                                 self._waitinig = True 
@@ -642,7 +650,7 @@ class BaselineAgent(ArtificialBrain):
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove stones together.','RescueBot')
                                 # increase waiting time
-                                start_timer()
+                                start_timer(next_timer_id())
                                 if stay_idle():
                                     return None, {}
                                     self._waitinig = True
@@ -660,7 +668,7 @@ class BaselineAgent(ArtificialBrain):
                             if state[{'is_human_agent': True}]:
                                 self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
-                                start_timer()
+                                start_timer(next_timer_id())
                                 if stay_idle():
                                     return None, {}
                                     self._waitinig = True
@@ -676,7 +684,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle until the human communicates what to do with the identified obstacle
                         else:
                             # increase waiting time
-                            start_timer()
+                            start_timer(next_timer_id())
                             if stay_idle():
                                 return None, {}
                                 self._waitinig = True
@@ -880,7 +888,7 @@ class BaselineAgent(ArtificialBrain):
 ############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
                     # increase waiting time
-                    start_timer()
+                    start_timer(next_timer_id())
                     if stay_idle():
                         return Idle.__name__, {'duration_in_ticks': 25}
                     else:
@@ -1011,6 +1019,84 @@ class BaselineAgent(ArtificialBrain):
         '''
         process incoming messages received from the team members
         '''
+        trustBeliefs = self._trustBelief(
+            self._teamMembers,
+            self._loadBelief(self._teamMembers, self._folder),
+            self._folder,
+            self._receivedMessages
+        )
+
+        # Functions that can be used to retrieve the current trust-beliefs
+        def getCurrentWillingnessBelief():
+            return trustBeliefs[self._humanName]['willingness'] * getCurrentConfidence()
+    
+        def getCurrentCompetenceBelief():
+            return trustBeliefs[self._humanName]['competence'] * getCurrentConfidence()
+        
+        def getCurrentConfidence():
+            return trustBeliefs[self._humanName]['confidence']
+        
+        # A useful set of functions that can be used to determine how high/low the trust beliefs are
+        # towards the human player
+
+        # WILLINGNESS
+        def willingnessLowerThan(threshold: float) -> bool:
+            return getCurrentWillingnessBelief() < threshold
+
+        def willingnessHigherThan(threshold: float) -> bool:
+            return getCurrentWillingnessBelief() > threshold
+
+        def willingnessApproximately(value: float, margin: float) -> bool:
+            return abs(getCurrentWillingnessBelief() - value) <= margin
+
+        def willingnessIsLow() -> bool:
+            return getCurrentWillingnessBelief() < -0.5
+
+        def willingnessIsMedium() -> bool:
+            return getCurrentWillingnessBelief() >= -0.5 and getCurrentWillingnessBelief() <= 0.5
+
+        def willingnessIsHigh() -> bool:
+            return getCurrentWillingnessBelief() > 0.5
+
+        # COMPETENCE
+        def competenceLowerThan(threshold: float) -> bool:
+            return getCurrentCompetenceBelief() < threshold
+        
+        def competenceHigherThan(threshold: float) -> bool:
+            return getCurrentCompetenceBelief() > threshold
+        
+        def competenceApproximately(value: float, margin: float) -> bool:
+            return abs(getCurrentCompetenceBelief() - value) <= margin
+        
+        def competenceIsLow() -> bool:
+            return getCurrentCompetenceBelief() < -0.5
+        
+        def competenceIsMedium() -> bool:
+            return getCurrentCompetenceBelief() >= -0.5 and getCurrentCompetenceBelief() <= 0.5
+        
+        def competenceIsHigh() -> bool:
+            return getCurrentCompetenceBelief() > 0.5
+
+        # CONFIDENCE
+        def confidenceLowerThan(threshold: float) -> bool:
+            return getCurrentConfidence() < threshold
+        
+        def confidenceHigherThan(threshold: float) -> bool:
+            return getCurrentConfidence() > threshold
+        
+        def confidenceApproximately(value: float, margin: float) -> bool:
+            return abs(getCurrentConfidence() - value) <= margin
+        
+        def confidenceIsLow() -> bool:
+            return getCurrentConfidence() < 0.25
+        
+        def confidenceIsMedium() -> bool:
+            return getCurrentConfidence() >= 0.25 and getCurrentConfidence() <= 0.75
+        
+        def confidenceIsHigh() -> bool:
+            return getCurrentConfidence() > 0.75
+
+
         receivedMessages = {}
         # Create a dictionary with a list of received messages from each team member
         for member in teamMembers:
@@ -1025,10 +1111,10 @@ class BaselineAgent(ArtificialBrain):
                 # If a received message involves team members searching areas, add these areas to the memory of areas that have been explored
                 if msg.startswith("Search:"):
                     area = 'area ' + msg.split()[-1]
-                    if area not in self._searchedRooms:
+                    if area not in self._searchedRooms and not competenceIsLow():
                         self._searchedRooms.append(area)
                 # If a received message involves team members finding victims, add these victims and their locations to memory
-                if msg.startswith("Found:"):
+                if msg.startswith("Found:") and not competenceIsLow():
                     # Identify which victim and area it concerns
                     if len(msg.split()) == 6:
                         foundVic = ' '.join(msg.split()[1:4])
@@ -1074,7 +1160,7 @@ class BaselineAgent(ArtificialBrain):
                     if condition=='weak':
                         self._rescue = 'together'
                 # If a received message involves team members asking for help with removing obstacles, add their location to memory and come over
-                if msg.startswith('Remove:'):
+                if msg.startswith('Remove:') and not competenceIsLow():
                     # Come over immediately when the agent is not carrying a victim
                     if not self._carrying:
                         # Identify at which location the human needs help
