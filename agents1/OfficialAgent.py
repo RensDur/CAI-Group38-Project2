@@ -209,6 +209,10 @@ class BaselineAgent(ArtificialBrain):
             self._timer_rec = -1
 
         def stay_idle():
+            if self._timer_rec < 0:
+                start_timer()
+                return True
+
             wait_time = time.time() - self._timer_rec
 
             result = True
@@ -501,10 +505,10 @@ class BaselineAgent(ArtificialBrain):
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
                                 # reset waiting time
-                                start_timer()
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
+                                start_timer()
                                 if stay_idle():
                                     return None, {}
                                 else:
