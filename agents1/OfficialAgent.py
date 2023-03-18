@@ -629,12 +629,24 @@ class BaselineAgent(ArtificialBrain):
                                     \n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds','RescueBot')
                                 self._waiting = True
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle          
-                        if (not (competenceIsLow() and (willingnessIsMedium() or willingnessIsHigh()))) and self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
+                        if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
+
+                            # If the competence-belief is low
+                            if competenceIsLow():
+                                # Then don't trust the human's decision to leave the stones and remove them anyway
+                                print("human had the chance to answer with 'remove alone', and he did. So we remove the stone alone.")
+                                self._answered = True
+                                self._waiting = False
+                                self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}
+
                             print("human had the chance to answer with 'continue', and he did. So we do not remove the stone.")
                             # go to new phase
                             do_not_remove()
                         # Remove the obstacle alone if the human decides so
-                        if (not (competenceIsLow() and (willingnessIsMedium() or willingnessIsHigh()))) and self.received_messages_content and self.received_messages_content[-1] == 'Remove alone' and not self._remove:
+                        if self.received_messages_content and self.received_messages_content[-1] == 'Remove alone' and not self._remove:
                             print("human had the chance to answer with 'remove alone', and he did. So we remove the stone alone.")
                             self._answered = True
                             self._waiting = False
@@ -643,7 +655,19 @@ class BaselineAgent(ArtificialBrain):
                             self._remove = False
                             return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Remove the obstacle together if the human decides so
-                        if (not (willingnessIsLow() and competenceIsHigh())) and self.received_messages_content and self.received_messages_content[-1] == 'Remove together' or self._remove:
+                        if self.received_messages_content and self.received_messages_content[-1] == 'Remove together' or self._remove:
+                            
+                            # If willingness is low or competence is low
+                            if willingnessIsLow() or competenceIsLow():
+                                # Decide to remove the stones alone, as we predict the human won't be helping soon.
+                                print("human had the chance to answer with 'remove alone', and he did. So we remove the stone alone.")
+                                self._answered = True
+                                self._waiting = False
+                                self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}
+
                             if not self._remove:
                                 self._answered = True
                             # Tell the human to come over and be idle untill human arrives
@@ -855,22 +879,35 @@ class BaselineAgent(ArtificialBrain):
                 # Make a plan to rescue a found mildly injured victim together if the human decides so
 ############### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
 
-                if (not willingnessIsLow()) and self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
-                    print("human had the chance to respond with 'rescue together', and he did")
-                    self._rescue = 'together'
-                    self._answered = True
-                    self._waiting = False
-                    # Tell the human to come over and help carry the mildly injured victim
-                    if not state[{'is_human_agent': True}]:
-                        self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to carry ' + str(self._recentVic) + ' together.', 'RescueBot')
-                    # Tell the human to carry the mildly injured victim together
-                    if state[{'is_human_agent': True}]:
-                        self._sendMessage('Lets carry ' + str(self._recentVic) + ' together! Please wait until I moved on top of ' + str(self._recentVic) + '.', 'RescueBot')
-                    self._goalVic = self._recentVic
-                    self._recentVic = None
-                    self._phase = Phase.PLAN_PATH_TO_VICTIM
+                if self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
+                    # If the willingness-belief is low or the competence-belief is low
+                    if willingnessIsLow() or competenceIsLow():
+                        # Then decide to rescue the victim alone, since we don't trust the human to help soon
+                        print("human had the chance to respond with 'rescue alone', and he did, so I rescue alone")
+                        self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                        self._rescue = 'alone'
+                        self._answered = True
+                        self._waiting = False
+                        self._goalVic = self._recentVic
+                        self._goalLoc = self._remaining[self._goalVic]
+                        self._recentVic = None
+                        self._phase = Phase.PLAN_PATH_TO_VICTIM
+                    else:
+                        print("human had the chance to respond with 'rescue together', and he did")
+                        self._rescue = 'together'
+                        self._answered = True
+                        self._waiting = False
+                        # Tell the human to come over and help carry the mildly injured victim
+                        if not state[{'is_human_agent': True}]:
+                            self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to carry ' + str(self._recentVic) + ' together.', 'RescueBot')
+                        # Tell the human to carry the mildly injured victim together
+                        if state[{'is_human_agent': True}]:
+                            self._sendMessage('Lets carry ' + str(self._recentVic) + ' together! Please wait until I moved on top of ' + str(self._recentVic) + '.', 'RescueBot')
+                        self._goalVic = self._recentVic
+                        self._recentVic = None
+                        self._phase = Phase.PLAN_PATH_TO_VICTIM
                 # Make a plan to rescue the mildly injured victim alone if the human decides so, and communicate this to the human
-                if willingnessIsLow() or (competenceIsHigh() and self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic):
+                if self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic:
                     print("human had the chance to respond with 'rescue alone', and he did, so I rescue alone")
                     self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
                     self._rescue = 'alone'
@@ -881,9 +918,27 @@ class BaselineAgent(ArtificialBrain):
                     self._recentVic = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
                 # Continue searching other areas if the human decides so
-                if competenceIsHigh() and self.received_messages_content and self.received_messages_content[-1] == 'Continue':
+                if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and 'mild' in self._recentVic:
+                    # If low competence-belief
+                    if competenceIsLow():
+                        # Don't trust the human's decision and rescue the victim anyway
+                        print("human had the chance to respond with 'rescue alone', and he did, so I rescue alone")
+                        self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                        self._rescue = 'alone'
+                        self._answered = True
+                        self._waiting = False
+                        self._goalVic = self._recentVic
+                        self._goalLoc = self._remaining[self._goalVic]
+                        self._recentVic = None
+                        self._phase = Phase.PLAN_PATH_TO_VICTIM
+                    else:
+                        print("human had the chance to respond with 'continue', and he did, so I dont rescue and continue")
+                        do_not_rescue()
+
+                if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and 'critical' in self._recentVic:
                     print("human had the chance to respond with 'continue', and he did, so I dont rescue and continue")
                     do_not_rescue()
+
                 # Remain idle untill the human communicates to the agent what to do with the found victim
 ############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
