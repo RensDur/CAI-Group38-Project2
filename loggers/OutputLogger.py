@@ -3,8 +3,9 @@ import sys
 import csv
 import glob
 import pathlib
+from agents1.OfficialAgent import evaluation
 
-def output_logger(fld):
+def output_logger(fld, eval_type=None):
     recent_dir = max(glob.glob(os.path.join(fld, '*/')), key=os.path.getmtime)
     recent_dir = max(glob.glob(os.path.join(recent_dir, '*/')), key=os.path.getmtime)
     action_file = glob.glob(os.path.join(recent_dir,'world_1/action*'))[0]
@@ -42,8 +43,16 @@ def output_logger(fld):
                 trustfile_contents.append(res)
     # Retrieve the stored trust belief values
     name = trustfile_contents[-1]['name']
-    competence = trustfile_contents[-1]['competence']
-    willingness = trustfile_contents[-1]['willingness']
+    # Only retrieve competence and willingness from trustfile if not evaluating the trust mechanism
+    if eval_type is None:
+        competence = trustfile_contents[-1]['competence']
+        willingness = trustfile_contents[-1]['willingness']
+        confidence = trustfile_contents[-1]['confidence']
+    else:
+        competence = evaluation[eval_type] if eval_type != 'RANDOM-TRUST' else evaluation[eval_type]['competence']
+        willingness = evaluation[eval_type] if eval_type != 'RANDOM-TRUST' else evaluation[eval_type]['willingness']
+        confidence = evaluation[eval_type] if eval_type != 'RANDOM-TRUST' else evaluation[eval_type]['confidence']
+
     # Retrieve the number of ticks to finish the task, score, and completeness
     no_ticks = action_contents[-1]['tick_nr']
     score = action_contents[-1]['score']
@@ -56,4 +65,4 @@ def output_logger(fld):
         csv_writer.writerow([completeness,score,no_ticks,len(unique_agent_actions),len(unique_human_actions)])
     with open(fld + '/beliefs/allTrustBeliefs.csv', mode='a+') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow([name,competence,willingness])
+        csv_writer.writerow([name,competence,willingness,confidence])
