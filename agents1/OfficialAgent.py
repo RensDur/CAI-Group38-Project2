@@ -857,6 +857,9 @@ class BaselineAgent(ArtificialBrain):
                     # Reset received messages (bug fix)
                     self.received_messages = []
                     self.received_messages_content = []
+                    # Make sure the RescueBot moves on after not finding a victim
+                    self._recentVic = None
+                    self._phase = Phase.FIND_NEXT_GOAL
                 # Add the area to the list of searched areas
                 if self._door['room_name'] not in self._searchedRooms:
                     self._searchedRooms.append(self._door['room_name'])
@@ -1279,7 +1282,7 @@ class BaselineAgent(ArtificialBrain):
             # Evaluating, therefore no need to read csv file
             competence = default if self._eval_type != 'RANDOM-TRUST' else default['competence']
             willingness = default if self._eval_type != 'RANDOM-TRUST' else default['willingness']
-            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 0.5}
+            trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': 1}
 
         return trustBeliefs
 
