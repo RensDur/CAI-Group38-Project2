@@ -278,6 +278,7 @@ class BaselineAgent(ArtificialBrain):
         # If carrying a victim together, let agent be idle (because joint actions are essentially carried out by the human)
         if self._carryingTogether == True:
             return None, {}
+            self._waitinig = True
 
         # Send the hidden score message for displaying and logging the score during the task, DO NOT REMOVE THIS
         self._sendMessage('Our score is ' + str(state['rescuebot']['score']) + '.', 'RescueBot')
@@ -295,6 +296,7 @@ class BaselineAgent(ArtificialBrain):
                     self._phase = Phase.FIND_NEXT_GOAL
                 else:
                     return None, {}
+                    self._waitinig = True
 
             # Phase 1
             if Phase.FIND_NEXT_GOAL == self._phase:
@@ -321,6 +323,7 @@ class BaselineAgent(ArtificialBrain):
                 # Remain idle if there are no victims left to rescue
                 if not remainingZones:
                     return None, {}
+                    self._waitinig = True
 
                 # Check which victims can be rescued next because human or agent already found them             
                 for vic in remainingVics:
@@ -498,6 +501,7 @@ class BaselineAgent(ArtificialBrain):
                                 start_timer()
                                 if stay_idle():
                                     return None, {}
+                                    self._waitinig = True
                                 else:
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                     # go to new phase
@@ -511,6 +515,7 @@ class BaselineAgent(ArtificialBrain):
                                 start_timer()
                                 if stay_idle():
                                     return None, {}
+                                    self._waitinig = True
                                 else:
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                     # go to new phase
@@ -520,7 +525,8 @@ class BaselineAgent(ArtificialBrain):
                             # increase waiting time
                             start_timer()
                             if stay_idle():
-                                return None, {} 
+                                return None, {}
+                                self._waitinig = True 
                             else:
                                 print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                 # go to new phase
@@ -567,7 +573,8 @@ class BaselineAgent(ArtificialBrain):
                             # increase waiting time
                             start_timer()
                             if stay_idle():
-                                return None, {} 
+                                return None, {}
+                                self._waitinig = True 
                             else:
                                 print("we have waited too long at the human, so we remove tree alone")
                                 # waited too long! We remove alone!
@@ -638,6 +645,7 @@ class BaselineAgent(ArtificialBrain):
                                 start_timer()
                                 if stay_idle():
                                     return None, {}
+                                    self._waitinig = True
                                 else:
                                     print("human responded with 'remove together', but did not come her in time, so we remove alone")
                                     # we have waited too long, remove alone!
@@ -655,6 +663,7 @@ class BaselineAgent(ArtificialBrain):
                                 start_timer()
                                 if stay_idle():
                                     return None, {}
+                                    self._waitinig = True
                                 else:
                                     print("human responded with 'remove together' and has arrived here, but now doesnt respond in time, so we remove alone")
                                     # we have waited too long, remove alone!
@@ -670,6 +679,7 @@ class BaselineAgent(ArtificialBrain):
                             start_timer()
                             if stay_idle():
                                 return None, {}
+                                self._waitinig = True
                             else:
                                 print("human has not responded in time to our question, so we remove stone alone")
                                 # we have waited too long, remove alone!
@@ -935,6 +945,7 @@ class BaselineAgent(ArtificialBrain):
                             self._waiting = True
                             self._moving = False
                             return None, {}
+                            self._waitinig = True
                 # Add the victim to the list of rescued victims when it has been picked up
                 if len(objects) == 0 and 'critical' in self._goalVic or len(objects) == 0 and 'mild' in self._goalVic and self._rescue=='together':
                     self._waiting = False
