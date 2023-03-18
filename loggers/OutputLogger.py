@@ -58,7 +58,19 @@ def output_logger(fld, eval_type=None):
     score = action_contents[-1]['score']
     completeness = action_contents[-1]['completeness']
     # Save the output as a csv file
-    print("Saving output...")
+    print("\nSaving output...")
+    print("=====TRUST BELIEFS=====")
+    print("Name: " + name)
+    print("Competence: " + str(competence))
+    print("Willingness: " + str(willingness))
+    print("Confidence: " + str(confidence))
+    print("\n\n=====OUPUT=====")
+    print("Completeness: " + str(completeness))
+    print("Score: " + str(score))
+    print("No_ticks: " + str(no_ticks))
+    print("Agent_actions: " + str(len(unique_agent_actions)))
+    print("Human_actions: " + str(len(unique_human_actions)))
+    print()
     with open(os.path.join(recent_dir,'world_1/output.csv'),mode='w') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['completeness','score','no_ticks','agent_actions','human_actions'])
