@@ -1329,7 +1329,7 @@ class BaselineAgent(ArtificialBrain):
                     and 'Found ' in getLastMessageSentByRobot() \
                     and ' because you told me ' in getLastMessageSentByRobot() \
                     and ' was located here.' in getLastMessageSentByRobot():
-                    increaseCompetenceBelief()
+                    increaseCompetenceBelief(5)
                     increaseConfidence(0.1)
 
                 # If the last message that the robot has sent to the human says
@@ -1338,7 +1338,7 @@ class BaselineAgent(ArtificialBrain):
                 if  getLastMessageSentByRobot() \
                     and ' not present in ' in getLastMessageSentByRobot() \
                     and ' because I searched the whole area without finding ' in getLastMessageSentByRobot():
-                    decreaseCompetenceBelief(4)
+                    decreaseCompetenceBelief(20)
                     increaseConfidence(0.1)
 
                 # If the last message from the robot says
