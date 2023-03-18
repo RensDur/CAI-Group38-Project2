@@ -209,6 +209,10 @@ class BaselineAgent(ArtificialBrain):
             self._timer_rec = -1
 
         def stay_idle():
+            if self._timer_rec < 0:
+                start_timer()
+                return True
+
             wait_time = time.time() - self._timer_rec
 
             result = True
@@ -501,10 +505,10 @@ class BaselineAgent(ArtificialBrain):
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
                                 # reset waiting time
-                                start_timer()
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!','RescueBot')
                                 # increase waiting time
                                 self._waiting_time += 1
+                                start_timer()
                                 if stay_idle():
                                     return None, {}
                                 else:
@@ -848,7 +852,7 @@ class BaselineAgent(ArtificialBrain):
                     self._recentVic = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
                 # Make a plan to rescue the mildly injured victim alone if the human decides so, and communicate this to the human
-                if (willingnessIsLow() or competenceIsHigh()) and self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic:
+                if willingnessIsLow() or (competenceIsHigh() and self.received_messages_content and self.received_messages_content[-1] == 'Rescue alone' and 'mild' in self._recentVic):
                     print("human had the chance to respond with 'rescue alone', and he did, so I rescue alone")
                     self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
                     self._rescue = 'alone'
@@ -1219,7 +1223,8 @@ class BaselineAgent(ArtificialBrain):
             prevMessage, i_p = findPreviousMessageSkipContinue(receivedMessages, i)
 
 
-            if self._eval_type is not None:
+            if self._eval_type is None:
+                print("Passed eval if-statement")
 
                 # If the last message that the robot has sent to the human says
                 # 'Found ~vic because you told me ~vic was located here.',
