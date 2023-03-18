@@ -204,21 +204,25 @@ class BaselineAgent(ArtificialBrain):
         def start_timer():
             if self._timer_rec < 0:
                 self._timer_rec = time.time()
-        
-        def get_timer():
-            return self._timer_rec
 
         def stop_timer():
             self._timer_rec = -1
 
         def stay_idle():
-            wait_time = time.time() - get_timer()
-            print("Willingness: " + str(willingnessIsLow()) + ", " + str(willingnessIsMedium()) + ", " + str(willingnessIsHigh()))
-            result = (willingnessIsLow() and wait_time <= 30) or (willingnessIsMedium() and wait_time <= 40) or (willingnessIsHigh() and wait_time <= 50)
+            wait_time = time.time() - self._timer_rec
 
+            result = True
+
+            if willingnessIsLow() and wait_time >= 30:
+                result = False
+            if willingnessIsMedium() and wait_time >= 40:
+                result = False
+            if willingnessIsHigh() and wait_time >= 50:
+                result = False
+            
             if not result:
                 stop_timer()
-
+            
             return result
 
         def do_not_remove():
@@ -494,7 +498,6 @@ class BaselineAgent(ArtificialBrain):
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                     # go to new phase
                                     do_not_remove()
-                                    stop_timer()
                             # Tell the human to remove the obstacle when he/she arrives
                             if state[{'is_human_agent': True}]:
                                 # reset waiting time
@@ -508,7 +511,6 @@ class BaselineAgent(ArtificialBrain):
                                     print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                     # go to new phase
                                     do_not_remove()
-                                    stop_timer()
                         # Remain idle untill the human communicates what to do with the identified obstacle 
                         else:
                             # increase waiting time
@@ -519,7 +521,6 @@ class BaselineAgent(ArtificialBrain):
                                 print("we have waited too long at the human, so we continue as rock cannot be removed alone")
                                 # go to new phase
                                 do_not_remove()
-                                stop_timer()
 
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info['obj_id']:
                         objects.append(info)
@@ -566,7 +567,6 @@ class BaselineAgent(ArtificialBrain):
                             else:
                                 print("we have waited too long at the human, so we remove tree alone")
                                 # waited too long! We remove alone!
-                                stop_timer()
                                 self._answered = True
                                 self._waiting = False
                                 self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -637,7 +637,6 @@ class BaselineAgent(ArtificialBrain):
                                 else:
                                     print("human responded with 'remove together', but did not come her in time, so we remove alone")
                                     # we have waited too long, remove alone!
-                                    stop_timer()
                                     self._answered = True
                                     self._waiting = False
                                     self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -655,7 +654,6 @@ class BaselineAgent(ArtificialBrain):
                                 else:
                                     print("human responded with 'remove together' and has arrived here, but now doesnt respond in time, so we remove alone")
                                     # we have waited too long, remove alone!
-                                    stop_timer()
                                     self._answered = True
                                     self._waiting = False
                                     self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -671,7 +669,6 @@ class BaselineAgent(ArtificialBrain):
                             else:
                                 print("human has not responded in time to our question, so we remove stone alone")
                                 # we have waited too long, remove alone!
-                                stop_timer()
                                 self._answered = True
                                 self._waiting = False
                                 self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.','RescueBot')
@@ -871,13 +868,11 @@ class BaselineAgent(ArtificialBrain):
                     # increase waiting time
                     start_timer()
                     if stay_idle():
-                        return None, {} 
+                        return Idle.__name__, {'duration_in_ticks': 25}
                     else:
-                        stop_timer()
                         if 'mild' in self._recentVic:
                             # waited too long, now we rescue alone!
                             print("we waited too long for a response, so I remove the mild victim alone")
-                            stop_timer()
                             self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
                             self._rescue = 'alone'
                             self._answered = True
@@ -886,7 +881,6 @@ class BaselineAgent(ArtificialBrain):
                             self._phase = Phase.FIND_NEXT_GOAL
                         else:
                             print("we waited too long for a response, but as a critical victim cant be rescued alone, I continue")
-                            stop_timer()
                             # continue
                             do_not_rescue()
                 # Find the next area to search when the agent is not waiting for an answer from the human or occupied with rescuing a victim
