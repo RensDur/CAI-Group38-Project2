@@ -1235,7 +1235,6 @@ class BaselineAgent(ArtificialBrain):
 
 
             if self._eval_type is None:
-                print("Passed eval if-statement")
 
                 # If the last message that the robot has sent to the human says
                 # 'Found ~vic because you told me ~vic was located here.',
