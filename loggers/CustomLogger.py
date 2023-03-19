@@ -1,7 +1,7 @@
 
 import csv
 
-action_file = "/Users/rensdur/Documents/TU Delft/BSc Computer Science and Engineering/Year 3/CSE3210 Collaborative Artificial Intelligence/Project 2/GitHub/CAI-Group38-Project2/logs/exp_strong_at_time_23h-34m-19s_date_18d-03m-2023y/world_1/actions__2023-03-18_233419.csv"
+action_file = "/Users/rensdur/Documents/TU Delft/BSc Computer Science and Engineering/Year 3/CSE3210 Collaborative Artificial Intelligence/Project 2/GitHub/CAI-Group38-Project2/logs/exp_strong_at_time_10h-31m-45s_date_19d-03m-2023y/world_1/actions__2023-03-19_103146.csv"
 
 action_header = []
 action_contents=[]
