@@ -1276,7 +1276,7 @@ class BaselineAgent(ArtificialBrain):
                     if row and row[0] != self._humanName:
                         competence = default
                         willingness = default
-                        confidence = 1.0
+                        confidence = 0.5
                         trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness, 'confidence': confidence}
         else:
             # Evaluating, therefore no need to read csv file
@@ -1418,8 +1418,8 @@ class BaselineAgent(ArtificialBrain):
 
                 
 
-                # For each received message, increase the confidence by 0.005
-                increaseConfidence(0.005)
+                # For each received message, increase the confidence by 0.05
+                increaseConfidence(0.05)
 
                 # If there's less than 10 seconds between this message and the previous one:
                 #   give a willingness increase
