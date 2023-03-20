@@ -105,6 +105,9 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
+        self._sendMessage('phase: '+str(self._phase)+'\n _carryingTogether: '+str(self._carryingTogether)+'\n remove: '+str(self._remove)+'\n _goalVic: '+str(self._goalVic)+
+            '\n _goalLoc: '+str(self._goalLoc)+'\n _answered: '+str(self._answered)+'\n _carrying: '+str(self._carrying)+
+            '\n _waiting: '+str(self._waiting)+'\n _rescue: '+str(self._rescue)+'\n _moving: '+str(self._moving), 'RescueBot')
 
         self._ticks_since_start += 1
         # Identify team members
@@ -952,13 +955,22 @@ class BaselineAgent(ArtificialBrain):
                     else:
                         if 'mild' in self._recentVic:
                             # waited too long, now we rescue alone!
-                            print("we waited too long for a response, so I remove the mild victim alone")
+                            # print("we waited too long for a response, so I remove the mild victim alone")
+                            # self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
+                            # self._rescue = 'alone'
+                            # self._answered = True
+                            # self._waiting = False
+                            # self._recentVic = None
+                            # self._phase = Phase.FIND_NEXT_GOAL
+
                             self._sendMessage('Picking up ' + self._recentVic + ' in ' + self._door['room_name'] + '.','RescueBot')
                             self._rescue = 'alone'
                             self._answered = True
                             self._waiting = False
+                            self._goalVic = self._recentVic
+                            self._goalLoc = self._remaining[self._goalVic]
                             self._recentVic = None
-                            self._phase = Phase.FIND_NEXT_GOAL
+                            self._phase = Phase.PLAN_PATH_TO_VICTIM
                         else:
                             print("we waited too long for a response, but as a critical victim cant be rescued alone, I continue")
                             # continue
@@ -1010,6 +1022,7 @@ class BaselineAgent(ArtificialBrain):
                         if not self._humanName in info['name']:
                             self._waiting = True
                             self._moving = False
+                            self._sendMessage('ik zit in deze loop','RescueBot')
                             return None, {}
                             self._waitinig = True
                 # Add the victim to the list of rescued victims when it has been picked up
