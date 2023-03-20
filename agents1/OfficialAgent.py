@@ -105,11 +105,6 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
-        # for debugging
-        # self._sendMessage('phase: '+str(self._phase)+'\n _carryingTogether: '+str(self._carryingTogether)+'\n remove: '+str(self._remove)+'\n _goalVic: '+str(self._goalVic)+
-        #     '\n _goalLoc: '+str(self._goalLoc)+'\n _answered: '+str(self._answered)+'\n _carrying: '+str(self._carrying)+
-        #     '\n _waiting: '+str(self._waiting)+'\n _rescue: '+str(self._rescue)+'\n _moving: '+str(self._moving), 'RescueBot')
-
         self._ticks_since_start += 1
         # Identify team members
         agent_name = state[self.agent_id]['obj_id']
@@ -345,7 +340,6 @@ class BaselineAgent(ArtificialBrain):
                         self._goalLoc = remaining[vic]
                         # Move to target victim
                         self._rescue = 'together'
-####################### TODO: call trustbelief to influence decision
                         self._sendMessage('Moving to ' + self._foundVictimLocs[vic]['room'] + ' to pick up ' + self._goalVic +'. Please come there as well to help me carry ' + self._goalVic + ' to the drop zone.', 'RescueBot')
                         # Plan path to victim because the exact location is known (i.e., the agent found this victim)
                         if 'location' in self._foundVictimLocs[vic].keys():
@@ -359,11 +353,9 @@ class BaselineAgent(ArtificialBrain):
                     if vic in self._foundVictims and vic not in self._todo:
                         self._goalVic = vic
                         self._goalLoc = remaining[vic]
-####################### TODO: call trustbelief to influence decision
                         # Rescue together when victim is critical or when the human is weak and the victim is mildly injured
                         if 'critical' in vic or 'mild' in vic and self._condition=='weak':
                             self._rescue = 'together'
-####################### TODO: call trustbelief to influence decision
                         # Rescue alone if the victim is mildly injured and the human not weak
                         if 'mild' in vic and self._condition!='weak':
                             self._rescue = 'alone'
@@ -390,7 +382,6 @@ class BaselineAgent(ArtificialBrain):
                                    and room['room_name'] not in self._tosearch]
                 # If all areas have been searched but the task is not finished, start searching areas again
                 if self._remainingZones and len(unsearchedRooms) == 0:
-                    # TODO: something went wrong, update trust belief
                     self._tosearch = []
                     self._searchedRooms = []
                     self._sendMessages = []
@@ -400,7 +391,6 @@ class BaselineAgent(ArtificialBrain):
                     self._phase = Phase.FIND_NEXT_GOAL
                 # If there are still areas to search, define which one to search next
                 else:
-##################### TODO: call trustbelief to influence decision
                     # Identify the closest door when the agent did not search any areas yet
                     if self._currentDoor == None:
                         # Find all area entrance locations
@@ -411,7 +401,6 @@ class BaselineAgent(ArtificialBrain):
                             self._doormat = (3, 5)
                         # Plan path to area
                         self._phase = Phase.PLAN_PATH_TO_ROOM
-##################### TODO: call trustbelief to influence decision
                     # Identify the closest door when the agent just searched another area
                     if self._currentDoor != None:
                         self._door = state.get_room_doors(self._getClosestRoom(state, unsearchedRooms, self._currentDoor))[0]
@@ -458,7 +447,6 @@ class BaselineAgent(ArtificialBrain):
                     self._state_tracker.update(state)
                     # Explain why the agent is moving to the specific area, either because it containts the current target victim or because it is the closest unsearched area
                     if self._goalVic in self._foundVictims and str(self._door['room_name']) == self._foundVictimLocs[self._goalVic]['room'] and not self._remove:
-####################### TODO: call trustbelief to influence decision  
                         if self._condition=='weak':
                             self._sendMessage('Moving to ' + str(self._door['room_name']) + ' to pick up ' + self._goalVic + ' together with you.', 'RescueBot')
                         else:
@@ -509,7 +497,6 @@ class BaselineAgent(ArtificialBrain):
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.','RescueBot')
                                 # increase waiting time
-
                                 start_timer(1)
                                 if stay_idle():
                                     return None, {}
@@ -634,7 +621,6 @@ class BaselineAgent(ArtificialBrain):
                                 self._waiting = True
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle          
                         if self.received_messages_content and self.received_messages_content[-1] == 'Continue' and not self._remove:
-
                             # If the competence-belief is low
                             if competenceIsLow():
                                 # Then don't trust the human's decision to leave the stones and remove them anyway
@@ -807,7 +793,6 @@ class BaselineAgent(ArtificialBrain):
                                 self._foundVictims.append(vic)
                                 self._foundVictimLocs[vic] = {'location': info['location'],'room': self._door['room_name'], 'obj_id': info['obj_id']}
                                 # Communicate which victim the agent found and ask the human whether to rescue the victim now or at a later stage
-############################### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
                                 
                                 if 'mild' in vic and self._answered == False and not self._waiting:
                                     if willingnessIsLow() and (competenceIsLow() or competenceIsMedium()):
@@ -852,7 +837,6 @@ class BaselineAgent(ArtificialBrain):
 
                 # Communicate that the agent did not find the target victim in the area while the human previously communicated the victim was located here
                 if self._goalVic in self._foundVictims and self._goalVic not in self._roomVics and self._foundVictimLocs[self._goalVic]['room'] == self._door['room_name']:
-################### TODO: maybe adapt trustbeliefs here because human has lied          
                     self._sendMessage(self._goalVic + ' not present in ' + str(self._door['room_name']) + ' because I searched the whole area without finding ' + self._goalVic + '.','RescueBot')
                     # Remove the victim location from memory
                     self._foundVictimLocs.pop(self._goalVic, None)
@@ -868,7 +852,6 @@ class BaselineAgent(ArtificialBrain):
                 if self._door['room_name'] not in self._searchedRooms:
                     self._searchedRooms.append(self._door['room_name'])
                 # Make a plan to rescue a found critically injured victim if the human decides so
-################# TODO: what if the human lied here??
                 if self.received_messages_content and self.received_messages_content[-1] == 'Rescue' and 'critical' in self._recentVic:
                     print("human decides to rescue critical victim")
                     self._rescue = 'together'
@@ -884,7 +867,6 @@ class BaselineAgent(ArtificialBrain):
                     self._recentVic = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
                 # Make a plan to rescue a found mildly injured victim together if the human decides so
-############### TODO: call trustbelief to influence decision (dont give all resposibility to human and let robot think aswell?)              
 
                 if self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVic:
                     # If the willingness-belief is low or the competence-belief is low
@@ -947,7 +929,6 @@ class BaselineAgent(ArtificialBrain):
                     do_not_rescue()
 
                 # Remain idle untill the human communicates to the agent what to do with the found victim
-############### TODO: maybe dont remain idle forever?
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue' and self.received_messages_content[-1] != 'Continue':
                     # increase waiting time
                     start_timer(8)
@@ -1019,7 +1000,6 @@ class BaselineAgent(ArtificialBrain):
                         self._goalVic in self._foundVictims and self._goalVic in self._todo and len(self._searchedRooms)==0 and 'class_inheritance' in info and 'CollectableBlock' in info['class_inheritance'] and 'mild' in info['obj_id'] and info['location'] in self._roomtiles:
                         objects.append(info)
                         # Remain idle when the human has not arrived at the location
-######################### TODO: maybe dont remain idle forever?
                         if not self._humanName in info['name']:
                             start_timer(20)
                             if stay_idle():
