@@ -105,9 +105,10 @@ class BaselineAgent(ArtificialBrain):
         return state
 
     def decide_on_actions(self, state):
-        self._sendMessage('phase: '+str(self._phase)+'\n _carryingTogether: '+str(self._carryingTogether)+'\n remove: '+str(self._remove)+'\n _goalVic: '+str(self._goalVic)+
-            '\n _goalLoc: '+str(self._goalLoc)+'\n _answered: '+str(self._answered)+'\n _carrying: '+str(self._carrying)+
-            '\n _waiting: '+str(self._waiting)+'\n _rescue: '+str(self._rescue)+'\n _moving: '+str(self._moving), 'RescueBot')
+        # for debugging
+        # self._sendMessage('phase: '+str(self._phase)+'\n _carryingTogether: '+str(self._carryingTogether)+'\n remove: '+str(self._remove)+'\n _goalVic: '+str(self._goalVic)+
+        #     '\n _goalLoc: '+str(self._goalLoc)+'\n _answered: '+str(self._answered)+'\n _carrying: '+str(self._carrying)+
+        #     '\n _waiting: '+str(self._waiting)+'\n _rescue: '+str(self._rescue)+'\n _moving: '+str(self._moving), 'RescueBot')
 
         self._ticks_since_start += 1
         # Identify team members
@@ -1022,7 +1023,6 @@ class BaselineAgent(ArtificialBrain):
                         if not self._humanName in info['name']:
                             self._waiting = True
                             self._moving = False
-                            self._sendMessage('ik zit in deze loop','RescueBot')
                             return None, {}
                             self._waitinig = True
                 # Add the victim to the list of rescued victims when it has been picked up
