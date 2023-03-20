@@ -1021,10 +1021,15 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle when the human has not arrived at the location
 ######################### TODO: maybe dont remain idle forever?
                         if not self._humanName in info['name']:
-                            self._waiting = True
-                            self._moving = False
-                            return None, {}
-                            self._waitinig = True
+                            start_timer(20)
+                            if stay_idle():
+                                self._waiting = True
+                                self._moving = False
+                                return None, {}
+                            else:
+                                print("Moving on to find the next victim, since the human didn't show up at for carrying this critical victim together")
+                                self._waiting = False
+                                self._phase = Phase.FIND_NEXT_GOAL
                 # Add the victim to the list of rescued victims when it has been picked up
                 if len(objects) == 0 and 'critical' in self._goalVic or len(objects) == 0 and 'mild' in self._goalVic and self._rescue=='together':
                     self._waiting = False
